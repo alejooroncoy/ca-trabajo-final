@@ -1,88 +1,253 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import '../styles/landing.css';
 ---
 
-<Layout title="Hermes - Optimiza tus rutas de delivery">
-  <main class="landing-page">
-    <div class="hero-background">
-      <div class="noise-texture"></div>
-      <div class="gradient-blob blob-1"></div>
-      <div class="gradient-blob blob-2"></div>
-    </div>
+<Layout title="Hermes - Optimiza tus rutas de entrega">
+  <!-- Header/Navbar -->
+  <header class="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-blue-primary/10 shadow-sm">
+    <nav class="w-full max-w-7xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-primary to-coral rounded-lg flex items-center justify-center">
+          <span class="text-white font-bold text-lg">H</span>
+        </div>
+        <span class="text-xl font-bold text-blue-dark">Hermes</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <a href="#inicio" class="text-blue-medium hover:text-blue-dark font-medium transition-colors hidden md:block">Inicio</a>
+        <a href="#equipo" class="text-blue-medium hover:text-blue-dark font-medium transition-colors hidden md:block">Equipo</a>
+        <a href="/app" class="px-4 py-2 bg-coral text-white rounded-full text-sm font-semibold transition-all duration-300 hover:bg-coral-dark hover:shadow-lg">
+          Ir a la App
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="w-full min-h-screen bg-gradient-to-br from-blue-100 via-blue-50 via-white to-coral/20 relative overflow-hidden">
+    <!-- Degradado decorativo superior izquierdo - más visible -->
+    <div class="fixed top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-blue-primary/30 to-blue-light/20 rounded-full blur-3xl -translate-x-1/3 -translate-y-1/3"></div>
+    <!-- Degradado decorativo inferior derecho - más visible -->
+    <div class="fixed bottom-0 right-0 w-[500px] h-[500px] bg-gradient-to-tl from-coral/30 to-coral-light/20 rounded-full blur-3xl translate-x-1/3 translate-y-1/3"></div>
+    <!-- Degradado central adicional -->
+    <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-blue-primary/10 via-coral/5 to-transparent rounded-full blur-3xl"></div>
+    <!-- Patrón de puntos más visible -->
+    <div class="fixed inset-0 opacity-[0.08] pointer-events-none" style="background-image: radial-gradient(circle, #1A3A5C 1.5px, transparent 1.5px); background-size: 50px 50px;"></div>
     
-    <div class="hero-container">
-      <div class="hero-content">
-        <div class="brand-badge">
-          <span class="badge-dot"></span>
-          <span class="badge-text">Grupo 1</span>
+    <!-- Sección Hero -->
+    <section id="inicio" class="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8 pt-24 md:pt-28">
+      <div class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-8 lg:gap-12 items-center">
+        <!-- Contenido de texto -->
+        <div class="text-left lg:text-left">
+          <h1 class="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight mb-6 md:mb-8 text-blue-dark tracking-tight">
+            Hermes
+          </h1>
+          
+          <p class="text-lg md:text-xl lg:text-2xl text-blue-medium mb-8 md:mb-12 max-w-2xl leading-relaxed">
+            Optimiza tus rutas de entrega con inteligencia artificial. Velocidad, precisión y eficiencia en cada pedido.
+          </p>
+          
+          <div class="mt-8 md:mt-10">
+            <a href="/app" class="inline-block px-8 md:px-10 py-3 md:py-4 bg-coral text-white rounded-full text-sm md:text-base font-semibold transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:bg-coral-dark tracking-wide shadow-lg">
+              Ir a la Aplicación
+            </a>
+          </div>
         </div>
         
-        <h1 class="hero-title">
-          <span class="title-word title-1">Hermes</span>
-          <span class="title-word title-2">Delivery</span>
-        </h1>
-        
-        <div class="hero-description-wrapper">
-          <p class="hero-description">
-            Optimiza las rutas de delivery de tu empresa con inteligencia artificial.
+        <!-- Imagen principal -->
+        <div class="relative w-full h-[300px] md:h-[400px] lg:h-[500px] xl:h-[600px] flex items-center justify-center">
+          <!-- Sombra decorativa detrás de la imagen - más pronunciada -->
+          <div class="absolute inset-0 bg-gradient-to-br from-blue-primary/30 via-blue-light/20 to-coral/30 rounded-3xl blur-3xl transform scale-110"></div>
+          <!-- Borde degradado sutil -->
+          <div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-primary/20 to-coral/20 p-[2px]">
+            <div class="w-full h-full bg-white rounded-2xl"></div>
+          </div>
+          <div class="relative w-full h-full z-10">
+            <img 
+              src="/20943864.jpg" 
+              alt="Fast Delivery Service - Optimización de rutas" 
+              class="w-full h-full object-contain rounded-2xl shadow-2xl"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Sección Sobre el Proyecto -->
+    <section class="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 py-20 md:py-32">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 items-center">
+        <!-- Descripción del Problema -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl p-8 md:p-10 shadow-xl">
+          <h2 class="text-3xl md:text-4xl font-bold text-blue-dark mb-6 tracking-tight">
+            Descripción del Problema
+          </h2>
+          <p class="text-lg text-blue-medium mb-4 leading-relaxed">
+            El crecimiento del e-commerce ha impulsado la necesidad de optimizar la última milla en la logística urbana.
           </p>
-          <p class="hero-description-sub">
-            Velocidad, precisión y eficiencia en cada entrega.
+          <p class="text-lg text-blue-medium leading-relaxed">
+            El objetivo de nuestra propuesta es desarrollar una solución capaz de encontrar el camino más corto que conecte todos los puntos de entrega dentro de un grafo, cuyos nodos representan las calles y están definidos mediante coordenadas de latitud y longitud.
           </p>
         </div>
         
-        <div class="cta-wrapper">
-          <a href="/app" class="cta-button">
-            <span class="cta-text">Prueba ahora</span>
-            <svg class="cta-arrow" width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Algoritmos y Técnicas -->
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl p-8 md:p-10 shadow-xl">
+          <h2 class="text-3xl md:text-4xl font-bold text-coral mb-6 tracking-tight">
+            Algoritmos y Técnicas Utilizadas
+          </h2>
+          
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold text-blue-dark mb-4">Técnicas a utilizar:</h3>
+            <ul class="space-y-3">
+              <li class="flex items-center gap-3">
+                <div class="w-2 h-2 bg-coral rounded-full"></div>
+                <span class="text-lg text-blue-medium">Programación dinámica</span>
+              </li>
+              <li class="flex items-center gap-3">
+                <div class="w-2 h-2 bg-coral rounded-full"></div>
+                <span class="text-lg text-blue-medium">Algoritmo de Dijkstra</span>
+              </li>
+              <li class="flex items-center gap-3">
+                <div class="w-2 h-2 bg-coral rounded-full"></div>
+                <span class="text-lg text-blue-medium">Problema del Agente Viajero (TSP)</span>
+              </li>
+            </ul>
+          </div>
+          
+          <div class="border-t border-blue-primary/20 pt-6">
+            <h3 class="text-xl font-semibold text-blue-dark mb-4">Objetivo de la propuesta:</h3>
+            <p class="text-lg text-blue-medium leading-relaxed mb-4">
+              Para abordar el problema de optimización de rutas en un grafo que representa las calles de Lima, se utilizará el enfoque del Problema del Agente Viajero (TSP).
+            </p>
+            <p class="text-lg text-blue-medium leading-relaxed">
+              <strong class="text-blue-dark">Dijkstra</strong> proporciona la base de distancias, y la <strong class="text-blue-dark">programación dinámica</strong> permite construir la ruta óptima final de forma escalable y eficiente.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Sección de Integrantes -->
+    <section id="equipo" class="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 py-20 md:py-32">
+      <div class="text-center mb-12 md:mb-16">
+        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-blue-dark mb-4 tracking-tight">
+          Nuestro Equipo
+        </h2>
+        <p class="text-lg md:text-xl text-blue-medium max-w-2xl mx-auto">
+          Conoce a los integrantes que hacen posible este proyecto
+        </p>
+      </div>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 max-w-5xl mx-auto">
+        <!-- Alejandro Oroncoy - U202313397 -->
+        <div class="group relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+          <div class="relative w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-gradient-to-br from-blue-primary/20 to-coral/20 flex items-center justify-center">
+            <img 
+              src="/image.png" 
+              alt="Alejandro Oroncoy" 
+              class="w-full h-full object-cover"
+            />
+          </div>
+          <h3 class="text-xl font-semibold text-blue-dark text-center mb-1">Alejandro Oroncoy</h3>
+          <p class="text-blue-medium text-center text-sm mb-2">U202313397</p>
+          <p class="text-blue-medium text-center text-xs">Desarrollador</p>
+        </div>
+        
+        <!-- Gael Rivera - u202312222 -->
+        <div class="group relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+          <div class="relative w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-gradient-to-br from-coral/20 to-blue-primary/20 flex items-center justify-center">
+            <img 
+              src="/image (1).png" 
+              alt="Gael Rivera" 
+              class="w-full h-full object-cover"
+            />
+          </div>
+          <h3 class="text-xl font-semibold text-blue-dark text-center mb-1">Gael Rivera</h3>
+          <p class="text-blue-medium text-center text-sm mb-2">u202312222</p>
+          <p class="text-blue-medium text-center text-xs">Desarrollador</p>
+        </div>
+        
+        <!-- Kevin Chi - u202313655 -->
+        <div class="group relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+          <div class="relative w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-gradient-to-br from-blue-light/20 to-coral-light/20 flex items-center justify-center">
+            <svg class="w-20 h-20 text-blue-medium opacity-50" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
             </svg>
-          </a>
+          </div>
+          <h3 class="text-xl font-semibold text-blue-dark text-center mb-1">Kevin Chi</h3>
+          <p class="text-blue-medium text-center text-sm mb-2">u202313655</p>
+          <p class="text-blue-medium text-center text-xs">Desarrollador</p>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <!-- Footer -->
+  <footer class="relative z-10 bg-white/90 backdrop-blur-sm border-t border-blue-primary/10 mt-20">
+    <div class="w-full max-w-7xl mx-auto px-4 md:px-8 py-12 md:py-16">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 mb-8">
+        <!-- Logo y descripción -->
+        <div class="md:col-span-1">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-primary to-coral rounded-lg flex items-center justify-center">
+              <span class="text-white font-bold text-lg">H</span>
+            </div>
+            <span class="text-2xl font-bold text-blue-dark">Hermes</span>
+          </div>
+          <p class="text-blue-medium text-sm leading-relaxed max-w-xs">
+            Optimización de rutas de entrega con inteligencia artificial para la última milla en logística urbana.
+          </p>
         </div>
         
-        <div class="hero-stats">
-          <div class="stat-item">
-            <div class="stat-number" data-value="99">99</div>
-            <div class="stat-label">Precisión</div>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="stat-item">
-            <div class="stat-number" data-value="50">50</div>
-            <div class="stat-label">Menos tiempo</div>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="stat-item">
-            <div class="stat-number">24/7</div>
-            <div class="stat-label">Disponible</div>
-          </div>
+        <!-- Enlaces rápidos -->
+        <div>
+          <h3 class="text-lg font-semibold text-blue-dark mb-4">Enlaces Rápidos</h3>
+          <ul class="space-y-2">
+            <li>
+              <a href="#inicio" class="text-blue-medium hover:text-coral transition-colors text-sm">
+                Inicio
+              </a>
+            </li>
+            <li>
+              <a href="#equipo" class="text-blue-medium hover:text-coral transition-colors text-sm">
+                Nuestro Equipo
+              </a>
+            </li>
+            <li>
+              <a href="/app" class="text-blue-medium hover:text-coral transition-colors text-sm">
+                Ir a la Aplicación
+              </a>
+            </li>
+          </ul>
+        </div>
+        
+        <!-- Información del proyecto -->
+        <div>
+          <h3 class="text-lg font-semibold text-blue-dark mb-4">Proyecto</h3>
+          <ul class="space-y-2">
+            <li class="text-blue-medium text-sm">
+              Algoritmos: Dijkstra, TSP
+            </li>
+            <li class="text-blue-medium text-sm">
+              Programación Dinámica
+            </li>
+            <li class="text-blue-medium text-sm">
+              Optimización de Rutas
+            </li>
+          </ul>
         </div>
       </div>
       
-      <div class="hero-visual">
-        <div class="route-map">
-          <div class="map-point point-start">
-            <div class="point-pulse"></div>
-            <div class="point-core"></div>
+      <!-- Línea divisoria y copyright -->
+      <div class="border-t border-blue-primary/10 pt-8">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+          <p class="text-blue-medium text-sm text-center md:text-left">
+            © 2024 Hermes. Todos los derechos reservados.
+          </p>
+          <div class="flex items-center gap-2 text-blue-medium text-sm">
+            <span>Desarrollado con</span>
+            <span class="text-coral">❤️</span>
+            <span>por el equipo</span>
           </div>
-          <div class="map-point point-end">
-            <div class="point-pulse"></div>
-            <div class="point-core"></div>
-          </div>
-          <svg class="route-line" viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg">
-            <path class="route-path" d="M30,200 Q80,120 130,150 Q180,180 230,140 Q280,100 330,130 Q350,145 370,120" 
-                  fill="none" stroke="url(#routeGradient)" stroke-width="3" stroke-linecap="round"/>
-            <defs>
-              <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" style="stop-color:#10B981;stop-opacity:0.8" />
-                <stop offset="50%" style="stop-color:#F59E0B;stop-opacity:0.9" />
-                <stop offset="100%" style="stop-color:#EF4444;stop-opacity:0.8" />
-              </linearGradient>
-            </defs>
-          </svg>
-          <div class="map-grid"></div>
         </div>
       </div>
     </div>
-  </main>
+  </footer>
 </Layout>

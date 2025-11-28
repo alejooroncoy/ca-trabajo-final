@@ -12,7 +12,7 @@ Sistema full-stack para gestionar pedidos de entrega, calcular rutas optimizadas
 ## Estructura del Proyecto
 
 ```
-tf/
+ca-trabajo-final/
 ├── server/          # Backend FastAPI
 │   ├── app.py       # Aplicación principal
 │   ├── main.py      # Modelo Graph existente
@@ -34,22 +34,37 @@ tf/
 
 1. Navegar al directorio del servidor:
 ```bash
-cd tf/server
+cd server
 ```
 
-2. Activar el entorno virtual (si existe):
+2. Crear el entorno virtual (si no existe):
 ```bash
-source venv/bin/activate  # Linux/Mac
-# o
-venv\Scripts\activate  # Windows
+python -m venv venv
 ```
 
-3. Instalar dependencias:
+3. Activar el entorno virtual:
+```bash
+# Windows PowerShell
+.\venv\Scripts\Activate.ps1
+
+# Windows CMD
+venv\Scripts\activate.bat
+
+# Linux/Mac
+source venv/bin/activate
+```
+
+**Nota para Windows PowerShell**: Si obtienes un error de política de ejecución, ejecuta primero:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+4. Instalar dependencias:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Iniciar el servidor:
+5. Iniciar el servidor:
 ```bash
 uvicorn app:app --reload --port 8000
 ```
@@ -60,7 +75,7 @@ El servidor estará disponible en `http://localhost:8000`
 
 1. Navegar al directorio del frontend:
 ```bash
-cd tf/frontend
+cd frontend
 ```
 
 2. Instalar dependencias:
@@ -81,7 +96,7 @@ El frontend estará disponible en `http://localhost:3000`
 2. Iniciar el frontend (puerto 3000)
 3. (Opcional) Crear pedidos de ejemplo:
    ```bash
-   cd tf/server
+   cd server
    python ejemplo_pedidos.py
    ```
 4. Abrir el navegador en `http://localhost:3000`

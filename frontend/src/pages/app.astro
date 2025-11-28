@@ -5,21 +5,21 @@ import '../styles/global.css';
 ---
 
 <Layout title="Hermes - Sistema de Gestión de Pedidos">
-  <div class="app-page">
-    <header class="app-header">
-      <div class="header-content">
-        <div class="header-brand">
-          <div class="header-icon-wrapper">
-            <svg class="hermes-icon-small" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <div class="w-full h-screen flex flex-col bg-[#0a0a0f] overflow-hidden">
+    <header class="bg-[rgba(20,20,25,0.8)] border-b border-white/10 py-5 px-10 relative z-[1000] backdrop-blur-xl shadow-lg">
+      <div class="max-w-full flex justify-between items-center">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 flex items-center justify-center text-amber-500">
+            <svg class="w-full h-full animate-spin-slow" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="animation-duration: 20s;">
               <path d="M50 20 L70 40 L50 60 L30 40 Z" fill="currentColor" opacity="0.9"/>
               <circle cx="50" cy="75" r="8" fill="currentColor" opacity="0.7"/>
               <path d="M50 20 L50 40 M50 60 L50 75" stroke="currentColor" stroke-width="3" opacity="0.6"/>
             </svg>
           </div>
-          <h1 class="header-title">Hermes</h1>
+          <h1 class="font-serif text-3xl font-normal m-0 text-white tracking-tight">Hermes</h1>
         </div>
-        <nav class="header-nav">
-          <a href="/" class="nav-link">Inicio</a>
+        <nav class="flex gap-6 items-center">
+          <a href="/" class="text-gray-400 no-underline font-medium text-[0.9375rem] transition-all duration-300 py-2 px-4 rounded-md hover:text-amber-500 hover:bg-amber-500/10">Inicio</a>
         </nav>
       </div>
     </header>
