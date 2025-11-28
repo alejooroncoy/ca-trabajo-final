@@ -17,6 +17,13 @@ class CalcularRutaRequest(BaseModel):
     class Config:
         from_attributes = True
 
+class CalcularRutaMultipleRequest(BaseModel):
+    pedido_ids: List[int]
+    nodo_origen: int  # Nodo de origen (Saga o Ripley)
+    
+    class Config:
+        from_attributes = True
+
 class RutaResponse(BaseModel):
     pedido_id: int
     ruta: List[int]
@@ -159,5 +166,71 @@ def obtener_ruta_pedido(pedido_id: int):
         distancia_total=distancia_total,
         coordenadas=coordenadas,
         segmentos=[[[lat, lon] for lat, lon in segmento] for segmento in segmentos]
+    )
+
+@router.post("/calcular-multiple", response_model=RutaResponse)
+def calcular_ruta_multiple(request: CalcularRutaMultipleRequest):
+    """
+    Calcula la ruta optimizada para múltiples pedidos.
+    La ruta comienza en el origen, visita todos los destinos seleccionados (TSP),
+    y regresa al origen.
+    """
+    if not request.pedido_ids or len(request.pedido_ids) == 0:
+        raise HTTPException(status_code=400, detail="Debe seleccionar al menos un pedido")
+    
+    # Obtener todos los pedidos
+    pedidos = []
+    nodos_destino = []
+    for pedido_id in request.pedido_ids:
+        pedido = pedido_repository.get_by_id(pedido_id)
+        if not pedido:
+            raise HTTPException(status_code=404, detail=f"Pedido {pedido_id} no encontrado")
+        pedidos.append(pedido)
+        nodos_destino.append(pedido.nodo_destino)
+    
+    print(f"Calculando ruta múltiple desde nodo {request.nodo_origen} para {len(nodos_destino)} destinos")
+    
+    # Construir lista completa: origen + destinos + origen (retorno)
+    nodos_completos = [request.nodo_origen] + nodos_destino + [request.nodo_origen]
+    
+    # Calcular ruta optimizada usando TSP (incluye retorno al origen)
+    ruta_optimizada, distancia_total, segmentos = ruta_service.calcular_ruta_completa_con_segmentos(nodos_completos)
+    
+    # Si TSP no devolvió la ruta completa, construirla manualmente
+    if not ruta_optimizada or len(ruta_optimizada) == 0:
+        # Fallback: usar orden directo
+        ruta_optimizada = nodos_completos
+        distancia_total = 0.0
+        segmentos = []
+    
+    # Asegurar que la ruta comienza y termina en el origen
+    if ruta_optimizada[0] != request.nodo_origen:
+        ruta_optimizada.insert(0, request.nodo_origen)
+    if ruta_optimizada[-1] != request.nodo_origen:
+        ruta_optimizada.append(request.nodo_origen)
+    
+    # Obtener coordenadas de todos los nodos de la ruta
+    from services.ruta_service import convertir_utm_a_latlon
+    coordenadas = []
+    if segmentos and len(segmentos) > 0:
+        # Usar coordenadas de los segmentos
+        for segmento in segmentos:
+            coordenadas.extend([[lat, lon] for lat, lon in segmento])
+    else:
+        # Fallback: obtener coordenadas de cada nodo
+        for nodo_id in ruta_optimizada:
+            coords_utm = ruta_service.grafo.graph.get_node_coords(nodo_id)
+            if coords_utm and coords_utm != (0, 0):
+                lat, lon = convertir_utm_a_latlon(coords_utm[0], coords_utm[1])
+                coordenadas.append([lat, lon])
+    
+    print(f"Ruta múltiple calculada: {len(ruta_optimizada)} nodos, distancia total: {distancia_total:.2f} km")
+    
+    return RutaResponse(
+        pedido_id=request.pedido_ids[0] if request.pedido_ids else 0,  # Usar primer pedido como referencia
+        ruta=ruta_optimizada,
+        distancia_total=distancia_total,
+        coordenadas=coordenadas,
+        segmentos=[[[lat, lon] for lat, lon in segmento] for segmento in segmentos] if segmentos else []
     )
 

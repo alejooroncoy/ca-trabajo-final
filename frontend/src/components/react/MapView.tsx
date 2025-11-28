@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { getNodos, getAristas, calcularRuta, type Pedido, type Nodo, type Ruta, type Arista } from '../../services/api';
+import '../../styles/map.css';
+import { getNodos, getAristas, type Nodo, type Ruta, type Origen } from '../../services/api';
 
 // Fix para iconos de Leaflet (usando URLs públicas)
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -10,10 +11,6 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
-
-interface MapViewProps {
-  selectedPedido: Pedido | null;
-}
 
 // Constantes
 const DEFAULT_VIEW: [number, number] = [-12.0464, -77.0428];
@@ -67,13 +64,18 @@ const adjustMapBounds = (map: L.Map, layers: L.Layer[], padding: number = 0.15) 
   }
 };
 
-export default function MapView({ selectedPedido }: MapViewProps) {
+interface MapViewProps {
+  rutaCalculada: Ruta | null;
+  origen: Origen | null;
+  pedidosSeleccionados?: Array<{ id: number; nodo_destino: number; cliente_nombre: string }>;
+}
+
+export default function MapView({ rutaCalculada, origen, pedidosSeleccionados = [] }: MapViewProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const markersRef = useRef<L.Marker[]>([]);
-  const edgesLayerRef = useRef<L.LayerGroup | null>(null);
+  const origenMarkerRef = useRef<L.Marker | null>(null);
+  const destinoMarkersRef = useRef<L.Marker[]>([]);
   const routeLayerRef = useRef<L.LayerGroup | L.Polyline | null>(null);
-  const highlightedMarkersRef = useRef<L.Marker[]>([]);
   const [nodos, setNodos] = useState<Nodo[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -103,84 +105,12 @@ export default function MapView({ selectedPedido }: MapViewProps) {
     });
   }, []);
 
-  // Cargar nodos y aristas del grafo
+  // Cargar nodos (solo para obtener coordenadas cuando sea necesario, no para mostrar)
   const loadNodos = async () => {
     try {
       setLoading(true);
-      const [nodosData, aristasData] = await Promise.all([
-        getNodos(),
-        getAristas()
-      ]);
-      
+      const nodosData = await getNodos();
       setNodos(nodosData);
-      
-      if (!mapRef.current || nodosData.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // Limpiar marcadores anteriores
-      markersRef.current.forEach((marker: L.Marker) => {
-        mapRef.current?.removeLayer(marker);
-      });
-      markersRef.current = [];
-
-      // Limpiar aristas anteriores
-      if (edgesLayerRef.current) {
-        mapRef.current.removeLayer(edgesLayerRef.current);
-      }
-      edgesLayerRef.current = L.layerGroup().addTo(mapRef.current);
-
-      // Crear un mapa de nodos por ID para acceso rápido
-      const nodosMap = new Map(nodosData.map((n: Nodo) => [n.id, n]));
-
-      // Agregar todos los marcadores
-      nodosData.forEach((nodo: Nodo) => {
-        if (nodo.latitud && nodo.longitud && isValidCoordinate(nodo.latitud, nodo.longitud)) {
-          const marker = L.marker([nodo.latitud, nodo.longitud], {
-            title: `Nodo ${nodo.id}`,
-          }).addTo(mapRef.current!);
-          
-          marker.bindPopup(`Nodo ${nodo.id}`);
-          markersRef.current.push(marker);
-        } else {
-          console.warn(`Nodo ${nodo.id} tiene coordenadas inválidas:`, nodo.latitud, nodo.longitud);
-        }
-      });
-      
-      // Dibujar aristas (conexiones entre nodos)
-      aristasData.forEach((arista: Arista) => {
-        const nodoOrigen = nodosMap.get(arista.origen);
-        const nodoDestino = nodosMap.get(arista.destino);
-        
-        if (nodoOrigen && nodoDestino &&
-          isValidCoordinate(nodoOrigen.latitud, nodoOrigen.longitud) &&
-          isValidCoordinate(nodoDestino.latitud, nodoDestino.longitud)) {
-          const polyline = L.polyline(
-            [
-              [nodoOrigen.latitud, nodoOrigen.longitud], 
-              [nodoDestino.latitud, nodoDestino.longitud]
-            ],
-            {
-              color: '#7f8c8d',
-              weight: 2,
-              opacity: 0.6,
-              smoothFactor: 1.0,
-              interactive: false,
-            }
-          );
-          edgesLayerRef.current!.addLayer(polyline);
-        }
-      });
-
-      // Ajustar vista para mostrar todos los marcadores
-      if (markersRef.current.length > 0) {
-        setTimeout(() => {
-          if (mapRef.current && markersRef.current.length > 0) {
-            adjustMapBounds(mapRef.current, markersRef.current, 0);
-          }
-        }, 100);
-      }
     } catch (err) {
       console.error('Error al cargar nodos:', err);
     } finally {
@@ -188,21 +118,9 @@ export default function MapView({ selectedPedido }: MapViewProps) {
     }
   };
 
-  // Limpiar capas del mapa
-  const clearMapLayers = () => {
+  // Limpiar ruta del mapa
+  const clearRoute = () => {
     if (!mapRef.current) return;
-
-    // Ocultar marcadores del grafo
-    markersRef.current.forEach((marker: L.Marker) => {
-      if (mapRef.current?.hasLayer(marker)) {
-        mapRef.current.removeLayer(marker);
-      }
-    });
-
-    // Ocultar aristas del grafo
-    if (edgesLayerRef.current && mapRef.current.hasLayer(edgesLayerRef.current)) {
-      mapRef.current.removeLayer(edgesLayerRef.current);
-    }
 
     // Eliminar ruta anterior
     if (routeLayerRef.current) {
@@ -214,40 +132,97 @@ export default function MapView({ selectedPedido }: MapViewProps) {
       }
       routeLayerRef.current = null;
     }
-
-    // Eliminar marcadores destacados
-    highlightedMarkersRef.current.forEach((marker: L.Marker) => {
-      mapRef.current?.removeLayer(marker);
-    });
-    highlightedMarkersRef.current = [];
   };
 
-  // Crear marcador destacado
-  const createHighlightMarker = (
-    nodo: Nodo,
-    color: string,
-    label: string,
-    pedidoId: number
-  ): L.CircleMarker => {
-    const marker = L.circleMarker([nodo.latitud, nodo.longitud], {
-      radius: 14,
-      fillColor: color,
+  // Mostrar marcador de origen
+  useEffect(() => {
+    if (!mapRef.current || !origen) return;
+
+    // Limpiar marcador de origen anterior
+    if (origenMarkerRef.current) {
+      mapRef.current.removeLayer(origenMarkerRef.current);
+    }
+
+    // Crear marcador de origen
+    const marker = L.circleMarker([origen.latitud, origen.longitud], {
+      radius: 18,
+      fillColor: '#10B981',
       color: '#ffffff',
-      weight: 3,
+      weight: 4,
       opacity: 1,
       fillOpacity: 0.95,
     });
-    
+
     marker.bindPopup(`
       <div style="text-align: left; padding: 0;">
-        <div style="font-weight: 600; color: ${color}; margin-bottom: 8px; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">${label}</div>
-        <div style="color: #ffffff; margin-bottom: 4px; font-size: 14px;">Nodo ${nodo.id}</div>
-        <div style="color: #808088; font-size: 12px;">Pedido #${pedidoId}</div>
+        <div style="font-weight: 600; color: #10B981; margin-bottom: 8px; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">Origen</div>
+        <div style="color: #1A3A5C; margin-bottom: 4px; font-size: 14px;">${origen.nombre}</div>
+        <div style="color: #808088; font-size: 12px;">Nodo ${origen.nodo_id}</div>
       </div>
     `);
-    
-    return marker;
-  };
+
+    marker.addTo(mapRef.current);
+    origenMarkerRef.current = marker;
+
+    // Ajustar vista para mostrar el origen
+    mapRef.current.setView([origen.latitud, origen.longitud], 12);
+  }, [origen]);
+
+  // Mostrar marcadores de destinos (pedidos seleccionados)
+  useEffect(() => {
+    if (!mapRef.current || pedidosSeleccionados.length === 0) {
+      // Limpiar marcadores de destino si no hay pedidos seleccionados
+      destinoMarkersRef.current.forEach((marker) => {
+        mapRef.current?.removeLayer(marker);
+      });
+      destinoMarkersRef.current = [];
+      return;
+    }
+
+    // Limpiar marcadores anteriores
+    destinoMarkersRef.current.forEach((marker) => {
+      mapRef.current?.removeLayer(marker);
+    });
+    destinoMarkersRef.current = [];
+
+    // Crear marcadores para cada pedido seleccionado
+    pedidosSeleccionados.forEach((pedido) => {
+      const nodo = nodos.find((n: Nodo) => n.id === pedido.nodo_destino);
+      if (nodo && isValidCoordinate(nodo.latitud, nodo.longitud)) {
+        const marker = L.circleMarker([nodo.latitud, nodo.longitud], {
+          radius: 14,
+          fillColor: '#EF4444',
+          color: '#ffffff',
+          weight: 3,
+          opacity: 1,
+          fillOpacity: 0.95,
+        });
+
+        marker.bindPopup(`
+          <div style="text-align: left; padding: 0;">
+            <div style="font-weight: 600; color: #EF4444; margin-bottom: 8px; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">Destino</div>
+            <div style="color: #1A3A5C; margin-bottom: 4px; font-size: 14px;">${pedido.cliente_nombre}</div>
+            <div style="color: #808088; font-size: 12px;">Pedido #${pedido.id} - Nodo ${nodo.id}</div>
+          </div>
+        `);
+
+        marker.addTo(mapRef.current!);
+        destinoMarkersRef.current.push(marker);
+      }
+    });
+
+    // Ajustar vista para mostrar todos los marcadores (origen + destinos)
+    if (origen && destinoMarkersRef.current.length > 0) {
+      const allMarkers = [origenMarkerRef.current, ...destinoMarkersRef.current].filter(Boolean) as L.Marker[];
+      if (allMarkers.length > 0) {
+        const group = L.featureGroup(allMarkers);
+        mapRef.current.fitBounds(group.getBounds().pad(0.1), {
+          padding: [50, 50],
+          maxZoom: 15,
+        });
+      }
+    }
+  }, [pedidosSeleccionados, nodos, origen]);
 
   // Asegurar que las coordenadas incluyan origen y destino
   const ensureOriginAndDestination = (
@@ -338,166 +313,88 @@ export default function MapView({ selectedPedido }: MapViewProps) {
     return L.polyline(coordenadas, options);
   };
 
-  // Calcular y mostrar ruta cuando se selecciona un pedido
+  // Mostrar ruta calculada cuando está disponible
   useEffect(() => {
-    if (!selectedPedido || !mapRef.current) return;
-
-    const calculateAndShowRoute = async () => {
-      try {
-        if (!mapRef.current) return;
-
-        clearMapLayers();
-
-        // Calcular ruta
-        const ruta = await calcularRuta(selectedPedido.id);
-        
-        // Verificar discrepancia entre nodos del pedido y nodos de la ruta
-        if (selectedPedido.nodos && selectedPedido.nodos.length > 1 && ruta.ruta && ruta.ruta.length === 1) {
-          console.warn(`⚠️ ADVERTENCIA: El pedido tiene ${selectedPedido.nodos.length} nodos pero la ruta solo devuelve ${ruta.ruta.length} nodo(s).`);
-        }
-
-        // Resaltar origen y destino
-        const origenId = selectedPedido.nodos && selectedPedido.nodos.length >= 2 
-          ? selectedPedido.nodos[0] 
-          : null;
-        const destinoId = selectedPedido.nodos && selectedPedido.nodos.length >= 2 
-          ? selectedPedido.nodos[1] 
-          : null;
-        
-        if (origenId && destinoId) {
-          const nodoOrigen = nodos.find((n: Nodo) => n.id === origenId);
-          const nodoDestino = nodos.find((n: Nodo) => n.id === destinoId);
-          
-          if (nodoOrigen) {
-            const markerOrigen = createHighlightMarker(nodoOrigen, '#10B981', 'Origen', selectedPedido.id);
-            markerOrigen.addTo(mapRef.current);
-            highlightedMarkersRef.current.push(markerOrigen as unknown as L.Marker);
-          }
-          
-          if (nodoDestino) {
-            const markerDestino = createHighlightMarker(nodoDestino, '#EF4444', 'Destino', selectedPedido.id);
-            markerDestino.addTo(mapRef.current);
-            highlightedMarkersRef.current.push(markerDestino as unknown as L.Marker);
-          }
-        }
-
-        if (!mapRef.current) return;
-
-        // Crear grupo de capas para la ruta
-        const routeGroup = L.layerGroup();
-        let coordenadasRuta: [number, number][] = [];
-
-        // Procesar segmentos si existen
-        if (ruta.segmentos && ruta.segmentos.length > 0) {
-          coordenadasRuta = processRouteSegments(ruta.segmentos);
-          coordenadasRuta = ensureOriginAndDestination(coordenadasRuta, origenId, destinoId);
-        } 
-        // Si no hay segmentos, usar coordenadas principales
-        else if (ruta.coordenadas && Array.isArray(ruta.coordenadas) && ruta.coordenadas.length > 1) {
-          coordenadasRuta = parseCoordinates(ruta.coordenadas);
-          coordenadasRuta = ensureOriginAndDestination(coordenadasRuta, origenId, destinoId);
-        }
-
-        // Dibujar polyline de la ruta
-        if (coordenadasRuta.length >= 2) {
-          const polyline = drawRoutePolyline(coordenadasRuta, {
-            color: ruta.segmentos && ruta.segmentos.length > 0 ? '#ffffff' : '#EF4444',
-            weight: ruta.segmentos && ruta.segmentos.length > 0 ? 5 : 8,
-            opacity: ruta.segmentos && ruta.segmentos.length > 0 ? 0.9 : 1.0,
-            smoothFactor: 1.0,
-            lineJoin: 'round',
-            lineCap: 'round',
-          });
-
-          if (polyline) {
-            routeGroup.addLayer(polyline);
-          }
-        }
-
-        // Agregar el grupo al mapa si tiene capas
-        if (routeGroup.getLayers().length > 0) {
-          routeGroup.addTo(mapRef.current);
-          routeLayerRef.current = routeGroup;
-
-          // Agregar popup con información de la ruta
-          const firstLayer = routeGroup.getLayers()[0] as L.Polyline;
-          const popupContent = `
-            <div style="padding: 0;">
-              <div style="font-weight: 600; color: #808088; margin-bottom: 12px; font-size: 14px; letter-spacing: 0.02em;">Ruta Optimizada</div>
-              <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 12px 0;"></div>
-              <div style="color: #808088; margin-bottom: 8px; font-size: 13px;"><strong>Distancia:</strong> ${ruta.distancia_total.toFixed(2)} km</div>
-              <div style="color: #808088; margin-bottom: 8px; font-size: 13px;"><strong>Nodos:</strong> ${ruta.ruta.length}</div>
-              <div style="color: #808088; margin-top: 12px; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase;">Camino más rápido</div>
-            </div>
-          `;
-          firstLayer.bindPopup(popupContent).openPopup();
-        }
-
-        // Ajustar vista para mostrar la ruta y los marcadores destacados
-        const allLayers: L.Layer[] = [];
-        routeGroup.eachLayer((layer: L.Layer) => allLayers.push(layer));
-        highlightedMarkersRef.current.forEach((marker: L.Marker) => allLayers.push(marker));
-        
-        if (allLayers.length > 0) {
-          adjustMapBounds(mapRef.current, allLayers, 0.15);
-        }
-      } catch (err) {
-        console.error('Error al calcular ruta:', err);
-      }
-    };
-
-    calculateAndShowRoute();
-  }, [selectedPedido, nodos]);
-
-  // Restaurar todos los marcadores y aristas cuando no hay pedido seleccionado
-  useEffect(() => {
-    if (selectedPedido || !mapRef.current) return;
-
-    // Restaurar todos los marcadores
-    markersRef.current.forEach((marker: L.Marker) => {
-      if (!mapRef.current?.hasLayer(marker)) {
-        marker.addTo(mapRef.current!);
-      }
-    });
-
-    // Restaurar todas las aristas
-    if (edgesLayerRef.current && !mapRef.current.hasLayer(edgesLayerRef.current)) {
-      edgesLayerRef.current.addTo(mapRef.current);
+    if (!rutaCalculada || !mapRef.current) {
+      // Si no hay ruta, solo limpiar la ruta anterior
+      clearRoute();
+      return;
     }
 
-    // Limpiar ruta anterior si existe
-    if (routeLayerRef.current) {
-      if (routeLayerRef.current instanceof L.LayerGroup) {
-        routeLayerRef.current.clearLayers();
-        mapRef.current.removeLayer(routeLayerRef.current);
-      } else {
-        mapRef.current.removeLayer(routeLayerRef.current);
+    try {
+      if (!mapRef.current) return;
+
+      clearRoute();
+
+
+      // Crear grupo de capas para la ruta
+      const routeGroup = L.layerGroup();
+      let coordenadasRuta: [number, number][] = [];
+
+      // Procesar segmentos si existen
+      if (rutaCalculada.segmentos && rutaCalculada.segmentos.length > 0) {
+        coordenadasRuta = processRouteSegments(rutaCalculada.segmentos);
+      } 
+      // Si no hay segmentos, usar coordenadas principales
+      else if (rutaCalculada.coordenadas && Array.isArray(rutaCalculada.coordenadas) && rutaCalculada.coordenadas.length > 1) {
+        coordenadasRuta = parseCoordinates(rutaCalculada.coordenadas);
       }
-      routeLayerRef.current = null;
-    }
 
-    // Limpiar marcadores destacados
-    highlightedMarkersRef.current.forEach((marker: L.Marker) => {
-      mapRef.current?.removeLayer(marker);
-    });
-    highlightedMarkersRef.current = [];
+      // Dibujar polyline de la ruta
+      if (coordenadasRuta.length >= 2) {
+        const polyline = drawRoutePolyline(coordenadasRuta, {
+          color: '#EF4444',
+          weight: 6,
+          opacity: 0.9,
+          smoothFactor: 1.0,
+          lineJoin: 'round',
+          lineCap: 'round',
+        });
 
-    // Ajustar vista para mostrar todos los marcadores
-    if (markersRef.current.length > 0) {
-      setTimeout(() => {
-        if (mapRef.current && markersRef.current.length > 0) {
-          adjustMapBounds(mapRef.current, markersRef.current, 0);
+        if (polyline) {
+          routeGroup.addLayer(polyline);
         }
-      }, 100);
+      }
+
+      // Agregar el grupo al mapa si tiene capas
+      if (routeGroup.getLayers().length > 0) {
+        routeGroup.addTo(mapRef.current);
+        routeLayerRef.current = routeGroup;
+
+        // Agregar popup con información de la ruta
+        const firstLayer = routeGroup.getLayers()[0] as L.Polyline;
+        const popupContent = `
+          <div style="padding: 0;">
+            <div style="font-weight: 600; color: #1A3A5C; margin-bottom: 12px; font-size: 14px; letter-spacing: 0.02em;">Ruta Optimizada</div>
+            <div style="border-top: 1px solid rgba(26, 58, 92, 0.1); margin: 12px 0;"></div>
+            <div style="color: #1A3A5C; margin-bottom: 8px; font-size: 13px;"><strong>Distancia:</strong> ${rutaCalculada.distancia_total.toFixed(2)} km</div>
+            <div style="color: #1A3A5C; margin-bottom: 8px; font-size: 13px;"><strong>Puntos:</strong> ${rutaCalculada.ruta.length}</div>
+            <div style="color: #808088; margin-top: 12px; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase;">Ruta con retorno al origen</div>
+          </div>
+        `;
+        firstLayer.bindPopup(popupContent);
+      }
+
+      // Ajustar vista para mostrar la ruta y los marcadores
+      const allLayers: L.Layer[] = [];
+      routeGroup.eachLayer((layer: L.Layer) => allLayers.push(layer));
+      if (origenMarkerRef.current) allLayers.push(origenMarkerRef.current);
+      destinoMarkersRef.current.forEach((marker) => allLayers.push(marker));
+      
+      if (allLayers.length > 0) {
+        adjustMapBounds(mapRef.current, allLayers, 0.15);
+      }
+    } catch (err) {
+      console.error('Error al mostrar ruta:', err);
     }
-  }, [selectedPedido?.id]);
+  }, [rutaCalculada]);
 
   return (
-    <div className="map-container-wrapper">
-      <div ref={mapContainerRef} className="map-container" />
+    <div className="relative w-full h-full bg-white">
+      <div ref={mapContainerRef} className="w-full h-full" />
       {loading && (
-        <div className="map-loading-overlay">
-          <div className="map-loading">Cargando mapa...</div>
+        <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex items-center justify-center z-[1000]">
+          <div className="text-base text-blue-dark font-medium tracking-wide">Cargando mapa...</div>
         </div>
       )}
     </div>

@@ -4,8 +4,18 @@ export interface Pedido {
   id: number;
   tienda: 'Saga' | 'Ripley';
   fecha: string;
-  nodos: number[];
+  nodo_destino: number;
+  cliente_nombre: string;
+  cliente_direccion: string;
+  cliente_telefono?: string | null;
   ruta_optimizada?: number[] | null;
+}
+
+export interface Origen {
+  nodo_id: number;
+  nombre: string;
+  latitud: number;
+  longitud: number;
 }
 
 export interface Ruta {
@@ -79,6 +89,24 @@ export async function getNodos(): Promise<Nodo[]> {
 export async function getAristas(): Promise<Arista[]> {
   const response = await fetch(`${API_BASE}/grafo/aristas`);
   if (!response.ok) throw new Error('Error al obtener aristas');
+  return response.json();
+}
+
+// Orígenes
+export async function getOrigenes(): Promise<{ Saga: Origen; Ripley: Origen }> {
+  const response = await fetch(`${API_BASE}/origenes`);
+  if (!response.ok) throw new Error('Error al obtener orígenes');
+  return response.json();
+}
+
+// Rutas múltiples
+export async function calcularRutaMultiple(pedidoIds: number[], nodoOrigen: number): Promise<Ruta> {
+  const response = await fetch(`${API_BASE}/rutas/calcular-multiple`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pedido_ids: pedidoIds, nodo_origen: nodoOrigen }),
+  });
+  if (!response.ok) throw new Error('Error al calcular ruta múltiple');
   return response.json();
 }
 

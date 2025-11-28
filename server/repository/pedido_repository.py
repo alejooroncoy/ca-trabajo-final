@@ -131,57 +131,48 @@ class PedidoRepository:
             print("Advertencia: No hay nodos disponibles en el grafo. Los pedidos mock no se crearán.")
             return
         
-        # Crear pedidos mock con 2 o más nodos del árbol para poder calcular rutas con TSP
-        pedidos_mock = [
-            PedidoCreate(
-                tienda="Saga",
-                fecha=hoy - timedelta(days=3),
-                nodos=self._obtener_nodos_reales(random.randint(3, 6))  # Entre 3 y 6 nodos
-            ),
-            PedidoCreate(
-                tienda="Ripley",
-                fecha=hoy - timedelta(days=3),
-                nodos=self._obtener_nodos_reales(random.randint(2, 5))  # Entre 2 y 5 nodos
-            ),
-            PedidoCreate(
-                tienda="Saga",
-                fecha=hoy - timedelta(days=2),
-                nodos=self._obtener_nodos_reales(random.randint(4, 7))  # Entre 4 y 7 nodos
-            ),
-            PedidoCreate(
-                tienda="Ripley",
-                fecha=hoy - timedelta(days=2),
-                nodos=self._obtener_nodos_reales(random.randint(2, 4))  # Entre 2 y 4 nodos
-            ),
-            PedidoCreate(
-                tienda="Saga",
-                fecha=hoy - timedelta(days=1),
-                nodos=self._obtener_nodos_reales(random.randint(3, 5))  # Entre 3 y 5 nodos
-            ),
-            PedidoCreate(
-                tienda="Ripley",
-                fecha=hoy - timedelta(days=1),
-                nodos=self._obtener_nodos_reales(random.randint(2, 6))  # Entre 2 y 6 nodos
-            ),
-            PedidoCreate(
-                tienda="Saga",
-                fecha=hoy,
-                nodos=self._obtener_nodos_reales(random.randint(2, 4))  # Entre 2 y 4 nodos
-            ),
-            PedidoCreate(
-                tienda="Ripley",
-                fecha=hoy,
-                nodos=self._obtener_nodos_reales(random.randint(3, 6))  # Entre 3 y 6 nodos
-            ),
+        # Datos hardcodeados de clientes con información real
+        # Usaremos nodos reales del grafo para los destinos
+        clientes_data = [
+            {"nombre": "María González", "direccion": "Av. Javier Prado 1234, San Isidro", "telefono": "987654321"},
+            {"nombre": "Carlos Rodríguez", "direccion": "Jr. de la Unión 567, Cercado de Lima", "telefono": "987654322"},
+            {"nombre": "Ana Martínez", "direccion": "Av. Arequipa 890, Miraflores", "telefono": "987654323"},
+            {"nombre": "Luis Fernández", "direccion": "Av. Brasil 234, Magdalena", "telefono": "987654324"},
+            {"nombre": "Carmen López", "direccion": "Av. La Marina 456, San Miguel", "telefono": "987654325"},
+            {"nombre": "Roberto Sánchez", "direccion": "Av. Universitaria 789, San Martín de Porres", "telefono": "987654326"},
+            {"nombre": "Patricia Torres", "direccion": "Av. Angamos 321, Surco", "telefono": "987654327"},
+            {"nombre": "Jorge Ramírez", "direccion": "Av. El Sol 654, La Molina", "telefono": "987654328"},
+            {"nombre": "Sofía Herrera", "direccion": "Av. Túpac Amaru 987, Independencia", "telefono": "987654329"},
+            {"nombre": "Miguel Vargas", "direccion": "Av. Los Olivos 147, Los Olivos", "telefono": "987654330"},
+            {"nombre": "Laura Jiménez", "direccion": "Av. Primavera 258, Chorrillos", "telefono": "987654331"},
+            {"nombre": "Diego Morales", "direccion": "Av. Pachacútec 369, Villa El Salvador", "telefono": "987654332"},
         ]
         
-        # Crear los pedidos mock solo si tienen al menos 2 nodos (necesario para TSP)
+        # Seleccionar nodos aleatorios del grafo para cada cliente
+        nodos_seleccionados = random.sample(nodos_reales, min(len(clientes_data), len(nodos_reales)))
+        
+        # Crear pedidos mock con información de clientes
+        pedidos_mock = []
+        for i, cliente in enumerate(clientes_data):
+            if i < len(nodos_seleccionados):
+                # Alternar entre Saga y Ripley
+                tienda = "Saga" if i % 2 == 0 else "Ripley"
+                # Fechas variadas
+                dias_atras = random.randint(0, 5)
+                
+                pedidos_mock.append(PedidoCreate(
+                    tienda=tienda,
+                    fecha=hoy - timedelta(days=dias_atras),
+                    nodo_destino=nodos_seleccionados[i],
+                    cliente_nombre=cliente["nombre"],
+                    cliente_direccion=cliente["direccion"],
+                    cliente_telefono=cliente["telefono"]
+                ))
+        
+        # Crear los pedidos
         for pedido_data in pedidos_mock:
-            if len(pedido_data.nodos) >= 2:
-                self.create(pedido_data)
-                print(f"Pedido creado con {len(pedido_data.nodos)} nodos: {pedido_data.nodos[:5]}...")  # Mostrar primeros 5
-            else:
-                print(f"Advertencia: Pedido no creado porque tiene menos de 2 nodos: {len(pedido_data.nodos)}")
+            self.create(pedido_data)
+            print(f"Pedido creado: {pedido_data.cliente_nombre} - Nodo destino: {pedido_data.nodo_destino}")
     
     def create(self, pedido_data: PedidoCreate) -> Pedido:
         """Crea un nuevo pedido"""
@@ -189,7 +180,10 @@ class PedidoRepository:
             id=self._next_id,
             tienda=pedido_data.tienda,
             fecha=pedido_data.fecha,
-            nodos=pedido_data.nodos,
+            nodo_destino=pedido_data.nodo_destino,
+            cliente_nombre=pedido_data.cliente_nombre,
+            cliente_direccion=pedido_data.cliente_direccion,
+            cliente_telefono=pedido_data.cliente_telefono,
             ruta_optimizada=None
         )
         self._pedidos[self._next_id] = pedido

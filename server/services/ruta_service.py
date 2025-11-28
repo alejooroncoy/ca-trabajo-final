@@ -287,12 +287,22 @@ class RutaService:
             ejemplos = list(self._nodo_to_idx.keys())[:5]
             print(f"   Ejemplos de nodos en matriz: {ejemplos}")
         
+        # Si el primer y último nodo son iguales, es un origen fijo
+        origen_fijo = None
+        if len(nodos) > 1 and nodos[0] == nodos[-1]:
+            origen_fijo = nodos[0]
+            # Remover el último nodo (duplicado) para el TSP
+            nodos_para_tsp = nodos[:-1]
+        else:
+            nodos_para_tsp = nodos
+        
         # Resolver TSP para obtener el orden optimizado
         ruta_optimizada, distancia_total = solve_tsp(
             self._matriz,
-            nodos,
+            nodos_para_tsp,
             self._nodo_to_idx,
-            self._idx_to_nodo
+            self._idx_to_nodo,
+            origen_fijo=origen_fijo
         )
         
         # Calcular el camino real en el grafo entre cada par de nodos consecutivos

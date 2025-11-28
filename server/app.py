@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import sys
 import os
 sys.path.insert(0, os.path.dirname(__file__))
-from routes import pedidos, rutas, grafo
+from routes import pedidos, rutas, grafo, origenes
 
 app = FastAPI(title="Sistema de Gestión de Pedidos", version="1.0.0")
 
@@ -20,6 +20,7 @@ app.add_middleware(
 app.include_router(pedidos.router, prefix="/api/pedidos", tags=["pedidos"])
 app.include_router(rutas.router, prefix="/api/rutas", tags=["rutas"])
 app.include_router(grafo.router, prefix="/api/grafo", tags=["grafo"])
+app.include_router(origenes.router, prefix="/api/origenes", tags=["origenes"])
 
 @app.get("/")
 def root():
