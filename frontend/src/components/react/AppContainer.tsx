@@ -50,9 +50,19 @@ export default function AppContainer() {
     }
 
     setCalculando(true);
+    setRutaCalculada(null); // Limpiar ruta anterior
+    
     try {
       const nodoOrigen = origenes[tiendaSeleccionada].nodo_id;
+      console.log('Calculando ruta múltiple:', {
+        pedidos: pedidosSeleccionados,
+        nodoOrigen,
+        tienda: tiendaSeleccionada
+      });
+      
       const ruta = await calcularRutaMultiple(pedidosSeleccionados, nodoOrigen);
+      console.log('Ruta calculada recibida:', ruta);
+      
       setRutaCalculada(ruta);
     } catch (error) {
       console.error('Error al calcular ruta:', error);

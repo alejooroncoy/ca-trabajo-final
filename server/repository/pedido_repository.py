@@ -132,24 +132,30 @@ class PedidoRepository:
             return
         
         # Datos hardcodeados de clientes con información real
-        # Usaremos nodos reales del grafo para los destinos
+        # Usaremos nodos FIJOS del grafo para cada cliente (determinístico)
         clientes_data = [
-            {"nombre": "María González", "direccion": "Av. Javier Prado 1234, San Isidro", "telefono": "987654321"},
-            {"nombre": "Carlos Rodríguez", "direccion": "Jr. de la Unión 567, Cercado de Lima", "telefono": "987654322"},
-            {"nombre": "Ana Martínez", "direccion": "Av. Arequipa 890, Miraflores", "telefono": "987654323"},
-            {"nombre": "Luis Fernández", "direccion": "Av. Brasil 234, Magdalena", "telefono": "987654324"},
-            {"nombre": "Carmen López", "direccion": "Av. La Marina 456, San Miguel", "telefono": "987654325"},
-            {"nombre": "Roberto Sánchez", "direccion": "Av. Universitaria 789, San Martín de Porres", "telefono": "987654326"},
-            {"nombre": "Patricia Torres", "direccion": "Av. Angamos 321, Surco", "telefono": "987654327"},
-            {"nombre": "Jorge Ramírez", "direccion": "Av. El Sol 654, La Molina", "telefono": "987654328"},
-            {"nombre": "Sofía Herrera", "direccion": "Av. Túpac Amaru 987, Independencia", "telefono": "987654329"},
-            {"nombre": "Miguel Vargas", "direccion": "Av. Los Olivos 147, Los Olivos", "telefono": "987654330"},
-            {"nombre": "Laura Jiménez", "direccion": "Av. Primavera 258, Chorrillos", "telefono": "987654331"},
-            {"nombre": "Diego Morales", "direccion": "Av. Pachacútec 369, Villa El Salvador", "telefono": "987654332"},
+            {"nombre": "María González", "direccion": "Av. Javier Prado 1234, San Isidro", "telefono": "987654321", "nodo_index": 0},
+            {"nombre": "Carlos Rodríguez", "direccion": "Jr. de la Unión 567, Cercado de Lima", "telefono": "987654322", "nodo_index": 50},
+            {"nombre": "Ana Martínez", "direccion": "Av. Arequipa 890, Miraflores", "telefono": "987654323", "nodo_index": 100},
+            {"nombre": "Luis Fernández", "direccion": "Av. Brasil 234, Magdalena", "telefono": "987654324", "nodo_index": 150},
+            {"nombre": "Carmen López", "direccion": "Av. La Marina 456, San Miguel", "telefono": "987654325", "nodo_index": 200},
+            {"nombre": "Roberto Sánchez", "direccion": "Av. Universitaria 789, San Martín de Porres", "telefono": "987654326", "nodo_index": 250},
+            {"nombre": "Patricia Torres", "direccion": "Av. Angamos 321, Surco", "telefono": "987654327", "nodo_index": 300},
+            {"nombre": "Jorge Ramírez", "direccion": "Av. El Sol 654, La Molina", "telefono": "987654328", "nodo_index": 350},
+            {"nombre": "Sofía Herrera", "direccion": "Av. Túpac Amaru 987, Independencia", "telefono": "987654329", "nodo_index": 400},
+            {"nombre": "Miguel Vargas", "direccion": "Av. Los Olivos 147, Los Olivos", "telefono": "987654330", "nodo_index": 450},
+            {"nombre": "Laura Jiménez", "direccion": "Av. Primavera 258, Chorrillos", "telefono": "987654331", "nodo_index": 500},
+            {"nombre": "Diego Morales", "direccion": "Av. Pachacútec 369, Villa El Salvador", "telefono": "987654332", "nodo_index": 550},
         ]
         
-        # Seleccionar nodos aleatorios del grafo para cada cliente
-        nodos_seleccionados = random.sample(nodos_reales, min(len(clientes_data), len(nodos_reales)))
+        # Ordenar nodos para asegurar consistencia
+        nodos_reales_ordenados = sorted(nodos_reales)
+        
+        # Seleccionar nodos FIJOS basados en índices determinísticos
+        nodos_seleccionados = []
+        for cliente in clientes_data:
+            index = cliente["nodo_index"] % len(nodos_reales_ordenados)
+            nodos_seleccionados.append(nodos_reales_ordenados[index])
         
         # Crear pedidos mock con información de clientes
         pedidos_mock = []
@@ -157,8 +163,8 @@ class PedidoRepository:
             if i < len(nodos_seleccionados):
                 # Alternar entre Saga y Ripley
                 tienda = "Saga" if i % 2 == 0 else "Ripley"
-                # Fechas variadas
-                dias_atras = random.randint(0, 5)
+                # Fechas variadas pero determinísticas (basadas en el índice)
+                dias_atras = i % 6  # 0 a 5 días, pero siempre el mismo para cada cliente
                 
                 pedidos_mock.append(PedidoCreate(
                     tienda=tienda,

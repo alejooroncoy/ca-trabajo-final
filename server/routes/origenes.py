@@ -55,10 +55,18 @@ def obtener_origenes():
             )
         }
     
-    # Seleccionar nodos reales del grafo para Saga y Ripley
-    # Usaremos nodos que existan en el grafo
-    nodo_saga = nodos_disponibles[0] if len(nodos_disponibles) > 0 else 0
-    nodo_ripley = nodos_disponibles[1] if len(nodos_disponibles) > 1 else nodos_disponibles[0]
+    # Seleccionar nodos FIJOS del grafo para Saga y Ripley (determinístico)
+    # Ordenar nodos para asegurar consistencia
+    nodos_disponibles_ordenados = sorted(nodos_disponibles)
+    
+    # Usar índices fijos para siempre obtener los mismos nodos
+    # Nodo para Saga: índice 10% del total
+    # Nodo para Ripley: índice 20% del total
+    index_saga = int(len(nodos_disponibles_ordenados) * 0.1) if len(nodos_disponibles_ordenados) > 0 else 0
+    index_ripley = int(len(nodos_disponibles_ordenados) * 0.2) if len(nodos_disponibles_ordenados) > 1 else 0
+    
+    nodo_saga = nodos_disponibles_ordenados[index_saga] if len(nodos_disponibles_ordenados) > index_saga else (nodos_disponibles_ordenados[0] if nodos_disponibles_ordenados else 0)
+    nodo_ripley = nodos_disponibles_ordenados[index_ripley] if len(nodos_disponibles_ordenados) > index_ripley else (nodos_disponibles_ordenados[0] if nodos_disponibles_ordenados else 0)
     
     # Obtener coordenadas
     coords_saga_utm = grafo.get_node_coords(nodo_saga)

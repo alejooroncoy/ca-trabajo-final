@@ -271,16 +271,28 @@ export default function MapView({ rutaCalculada, origen, pedidosSeleccionados = 
   const processRouteSegments = (segmentos: any[]): [number, number][] => {
     const todasLasCoordenadas: [number, number][] = [];
     
-    segmentos.forEach((segmento: any) => {
+    console.log('Procesando segmentos:', segmentos);
+    
+    segmentos.forEach((segmento: any, index: number) => {
       if (!segmento || !Array.isArray(segmento) || segmento.length < 2) {
+        console.warn(`Segmento ${index} inválido:`, segmento);
         return;
       }
 
-      const coordenadasSegmento = parseCoordinates(segmento);
+      // Los segmentos vienen como [[lat, lon], [lat, lon], ...]
+      const coordenadasSegmento: [number, number][] = segmento.map((coord: any) => {
+        if (Array.isArray(coord) && coord.length >= 2) {
+          return [Number(coord[0]), Number(coord[1])] as [number, number];
+        }
+        return null;
+      }).filter((coord: [number, number] | null): coord is [number, number] => coord !== null);
       
       if (coordenadasSegmento.length < 2) {
+        console.warn(`Segmento ${index} tiene menos de 2 coordenadas válidas`);
         return;
       }
+
+      console.log(`Segmento ${index}: ${coordenadasSegmento.length} puntos`);
 
       // Evitar duplicados en las uniones
       if (todasLasCoordenadas.length > 0) {
@@ -289,15 +301,19 @@ export default function MapView({ rutaCalculada, origen, pedidosSeleccionados = 
         const distancia = calculateDistance(ultimoPunto, primerPunto);
         
         if (distancia < 0.0001) {
+          // Si el primer punto del segmento es muy cercano al último punto agregado, omitirlo
           todasLasCoordenadas.push(...coordenadasSegmento.slice(1));
         } else {
+          // Agregar todo el segmento
           todasLasCoordenadas.push(...coordenadasSegmento);
         }
       } else {
+        // Primer segmento, agregar todas las coordenadas
         todasLasCoordenadas.push(...coordenadasSegmento);
       }
     });
 
+    console.log(`Total de coordenadas procesadas: ${todasLasCoordenadas.length}`);
     return todasLasCoordenadas;
   };
 
@@ -324,21 +340,27 @@ export default function MapView({ rutaCalculada, origen, pedidosSeleccionados = 
     try {
       if (!mapRef.current) return;
 
+      console.log('Dibujando ruta calculada:', rutaCalculada);
       clearRoute();
-
 
       // Crear grupo de capas para la ruta
       const routeGroup = L.layerGroup();
       let coordenadasRuta: [number, number][] = [];
 
-      // Procesar segmentos si existen
-      if (rutaCalculada.segmentos && rutaCalculada.segmentos.length > 0) {
+      // Procesar segmentos si existen (preferir segmentos porque tienen más detalle)
+      if (rutaCalculada.segmentos && Array.isArray(rutaCalculada.segmentos) && rutaCalculada.segmentos.length > 0) {
+        console.log('Usando segmentos para dibujar la ruta');
         coordenadasRuta = processRouteSegments(rutaCalculada.segmentos);
       } 
       // Si no hay segmentos, usar coordenadas principales
       else if (rutaCalculada.coordenadas && Array.isArray(rutaCalculada.coordenadas) && rutaCalculada.coordenadas.length > 1) {
+        console.log('Usando coordenadas principales para dibujar la ruta');
         coordenadasRuta = parseCoordinates(rutaCalculada.coordenadas);
+      } else {
+        console.warn('No hay coordenadas ni segmentos para dibujar la ruta');
       }
+
+      console.log(`Coordenadas finales para dibujar: ${coordenadasRuta.length} puntos`);
 
       // Dibujar polyline de la ruta
       if (coordenadasRuta.length >= 2) {
@@ -353,7 +375,10 @@ export default function MapView({ rutaCalculada, origen, pedidosSeleccionados = 
 
         if (polyline) {
           routeGroup.addLayer(polyline);
+          console.log('Polyline agregado al mapa');
         }
+      } else {
+        console.warn('No hay suficientes coordenadas para dibujar la ruta (mínimo 2 puntos)');
       }
 
       // Agregar el grupo al mapa si tiene capas

@@ -171,12 +171,16 @@ def obtener_ruta_pedido(pedido_id: int):
 @router.post("/calcular-multiple", response_model=RutaResponse)
 def calcular_ruta_multiple(request: CalcularRutaMultipleRequest):
     """
-    Calcula la ruta optimizada para múltiples pedidos.
+    Calcula la ruta optimizada para múltiples pedidos usando OSRM (rutas reales que siguen calles).
     La ruta comienza en el origen, visita todos los destinos seleccionados (TSP),
     y regresa al origen.
     """
     if not request.pedido_ids or len(request.pedido_ids) == 0:
         raise HTTPException(status_code=400, detail="Debe seleccionar al menos un pedido")
+    
+    # Importar servicios
+    from services.ruta_service import convertir_utm_a_latlon
+    from services.osrm_service import OSRMService
     
     # Obtener todos los pedidos
     pedidos = []
@@ -190,47 +194,126 @@ def calcular_ruta_multiple(request: CalcularRutaMultipleRequest):
     
     print(f"Calculando ruta múltiple desde nodo {request.nodo_origen} para {len(nodos_destino)} destinos")
     
-    # Construir lista completa: origen + destinos + origen (retorno)
-    nodos_completos = [request.nodo_origen] + nodos_destino + [request.nodo_origen]
+    # Paso 1: Obtener coordenadas de todos los nodos (origen + destinos)
+    def obtener_coordenadas_nodo(nodo_id: int) -> tuple:
+        """Obtiene coordenadas (lat, lon) de un nodo"""
+        coords_utm = ruta_service.grafo.graph.get_node_coords(nodo_id)
+        if coords_utm and coords_utm != (0, 0):
+            lat, lon = convertir_utm_a_latlon(coords_utm[0], coords_utm[1])
+            return (lat, lon)
+        return None
     
-    # Calcular ruta optimizada usando TSP (incluye retorno al origen)
-    ruta_optimizada, distancia_total, segmentos = ruta_service.calcular_ruta_completa_con_segmentos(nodos_completos)
+    # Obtener coordenadas del origen
+    origen_coords = obtener_coordenadas_nodo(request.nodo_origen)
+    if not origen_coords:
+        raise HTTPException(status_code=400, detail=f"No se pudieron obtener coordenadas del nodo origen {request.nodo_origen}")
     
-    # Si TSP no devolvió la ruta completa, construirla manualmente
-    if not ruta_optimizada or len(ruta_optimizada) == 0:
-        # Fallback: usar orden directo
-        ruta_optimizada = nodos_completos
-        distancia_total = 0.0
-        segmentos = []
+    # Obtener coordenadas de los destinos
+    destinos_coords = []
+    for nodo_id in nodos_destino:
+        coords = obtener_coordenadas_nodo(nodo_id)
+        if coords:
+            destinos_coords.append((nodo_id, coords))
+        else:
+            print(f"Advertencia: No se pudieron obtener coordenadas del nodo {nodo_id}")
     
-    # Asegurar que la ruta comienza y termina en el origen
-    if ruta_optimizada[0] != request.nodo_origen:
-        ruta_optimizada.insert(0, request.nodo_origen)
-    if ruta_optimizada[-1] != request.nodo_origen:
-        ruta_optimizada.append(request.nodo_origen)
+    if len(destinos_coords) == 0:
+        raise HTTPException(status_code=400, detail="No se pudieron obtener coordenadas de los destinos")
     
-    # Obtener coordenadas de todos los nodos de la ruta
-    from services.ruta_service import convertir_utm_a_latlon
-    coordenadas = []
-    if segmentos and len(segmentos) > 0:
-        # Usar coordenadas de los segmentos
-        for segmento in segmentos:
-            coordenadas.extend([[lat, lon] for lat, lon in segmento])
+    # Paso 2: Optimizar orden usando TSP (solo para el orden, no las rutas)
+    # Usar TSP del backend para obtener el orden optimizado
+    nodos_para_tsp = [nodo_id for nodo_id, _ in destinos_coords]
+    nodos_completos_tsp = [request.nodo_origen] + nodos_para_tsp + [request.nodo_origen]
+    
+    ruta_optimizada_nodos, _, _ = ruta_service.calcular_ruta_completa_con_segmentos(nodos_completos_tsp)
+    
+    # Si TSP falló, usar orden directo
+    if not ruta_optimizada_nodos or len(ruta_optimizada_nodos) < 3:
+        ruta_optimizada_nodos = nodos_completos_tsp
+    
+    # Asegurar que comienza y termina en origen
+    if ruta_optimizada_nodos[0] != request.nodo_origen:
+        ruta_optimizada_nodos.insert(0, request.nodo_origen)
+    if ruta_optimizada_nodos[-1] != request.nodo_origen:
+        ruta_optimizada_nodos.append(request.nodo_origen)
+    
+    # Paso 3: Crear diccionario de coordenadas por nodo_id
+    coords_por_nodo = {request.nodo_origen: origen_coords}
+    for nodo_id, coords in destinos_coords:
+        coords_por_nodo[nodo_id] = coords
+    
+    # Paso 4: Calcular rutas reales usando OSRM entre cada par consecutivo
+    puntos_ordenados = [coords_por_nodo[nodo_id] for nodo_id in ruta_optimizada_nodos if nodo_id in coords_por_nodo]
+    
+    print(f"Calculando rutas reales con OSRM para {len(puntos_ordenados)} puntos")
+    print(f"Puntos ordenados: {puntos_ordenados[:3]}... (mostrando primeros 3)")
+    
+    # Calcular ruta completa usando OSRM segmento por segmento para mayor precisión
+    todas_coordenadas: List[Tuple[float, float]] = []
+    distancia_total_km = 0.0
+    
+    for i in range(len(puntos_ordenados) - 1):
+        origen_punto = puntos_ordenados[i]
+        destino_punto = puntos_ordenados[i + 1]
+        
+        print(f"Calculando segmento {i+1}/{len(puntos_ordenados)-1}: {origen_punto} -> {destino_punto}")
+        
+        resultado_segmento = OSRMService.calcular_ruta_entre_puntos(
+            origen_punto,
+            destino_punto,
+            pasos_intermedios=True
+        )
+        
+        if resultado_segmento:
+            coordenadas_segmento, distancia_segmento = resultado_segmento
+            print(f"  Segmento calculado: {len(coordenadas_segmento)} puntos, {distancia_segmento:.2f} km")
+            
+            # Evitar duplicar el último punto
+            if todas_coordenadas and coordenadas_segmento:
+                if todas_coordenadas[-1] == coordenadas_segmento[0]:
+                    todas_coordenadas.extend(coordenadas_segmento[1:])
+                else:
+                    todas_coordenadas.extend(coordenadas_segmento)
+            else:
+                todas_coordenadas.extend(coordenadas_segmento)
+            
+            distancia_total_km += distancia_segmento
+        else:
+            # Fallback: línea recta
+            print(f"  OSRM falló para este segmento, usando línea recta")
+            todas_coordenadas.append(origen_punto)
+            todas_coordenadas.append(destino_punto)
+            distancia_total_km += OSRMService._distancia_haversine(origen_punto, destino_punto)
+    
+    print(f"Ruta completa: {len(todas_coordenadas)} puntos, {distancia_total_km:.2f} km total")
+    
+    if todas_coordenadas and len(todas_coordenadas) > 1:
+        # Convertir a formato de respuesta
+        coordenadas = [[lat, lon] for lat, lon in todas_coordenadas]
+        # Crear un segmento único con todas las coordenadas
+        segmentos = [coordenadas] if coordenadas else []
+        
+        return RutaResponse(
+            pedido_id=request.pedido_ids[0] if request.pedido_ids else 0,
+            ruta=ruta_optimizada_nodos,
+            distancia_total=distancia_total_km,
+            coordenadas=coordenadas,
+            segmentos=segmentos
+        )
     else:
-        # Fallback: obtener coordenadas de cada nodo
-        for nodo_id in ruta_optimizada:
-            coords_utm = ruta_service.grafo.graph.get_node_coords(nodo_id)
-            if coords_utm and coords_utm != (0, 0):
-                lat, lon = convertir_utm_a_latlon(coords_utm[0], coords_utm[1])
-                coordenadas.append([lat, lon])
-    
-    print(f"Ruta múltiple calculada: {len(ruta_optimizada)} nodos, distancia total: {distancia_total:.2f} km")
-    
-    return RutaResponse(
-        pedido_id=request.pedido_ids[0] if request.pedido_ids else 0,  # Usar primer pedido como referencia
-        ruta=ruta_optimizada,
-        distancia_total=distancia_total,
-        coordenadas=coordenadas,
-        segmentos=[[[lat, lon] for lat, lon in segmento] for segmento in segmentos] if segmentos else []
-    )
+        # Fallback: usar línea recta si OSRM falla
+        print("OSRM falló, usando línea recta como fallback")
+        coordenadas = [[lat, lon] for lat, lon in puntos_ordenados]
+        distancia_total = sum(
+            OSRMService._distancia_haversine(puntos_ordenados[i], puntos_ordenados[i+1])
+            for i in range(len(puntos_ordenados) - 1)
+        )
+        
+        return RutaResponse(
+            pedido_id=request.pedido_ids[0] if request.pedido_ids else 0,
+            ruta=ruta_optimizada_nodos,
+            distancia_total=distancia_total,
+            coordenadas=coordenadas,
+            segmentos=[[coords] for coords in coordenadas]
+        )
 
