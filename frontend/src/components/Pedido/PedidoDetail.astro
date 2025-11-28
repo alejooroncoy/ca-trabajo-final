@@ -1,0 +1,81 @@
+---
+interface Props {
+  pedido: {
+    id: number;
+    tienda: string;
+    fecha: string;
+    nodos: number[];
+    ruta_optimizada?: number[] | null;
+  };
+  ruta?: {
+    distancia_total: number;
+    ruta: number[];
+  } | null;
+}
+
+const { pedido, ruta } = Astro.props;
+---
+
+<div class="pedido-detail">
+  <h3>Detalle del Pedido</h3>
+  <div class="detail-section">
+    <p><strong>ID:</strong> {pedido.id}</p>
+    <p><strong>Tienda:</strong> <span class={`tienda-badge ${pedido.tienda.toLowerCase()}`}>{pedido.tienda}</span></p>
+    <p><strong>Fecha:</strong> {pedido.fecha}</p>
+    <p><strong>Nodos a visitar:</strong> {pedido.nodos.join(', ')}</p>
+  </div>
+  
+  {ruta && (
+    <div class="detail-section">
+      <h4>Ruta Optimizada</h4>
+      <p><strong>Distancia total:</strong> {ruta.distancia_total.toFixed(2)} km</p>
+      <p><strong>Secuencia:</strong> {ruta.ruta.join(' → ')}</p>
+    </div>
+  )}
+</div>
+
+<style>
+  .pedido-detail {
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-top: 1rem;
+  }
+
+  .pedido-detail h3 {
+    margin-top: 0;
+    color: #333;
+  }
+
+  .detail-section {
+    margin-bottom: 1rem;
+    color: #333 !important;
+  }
+
+  .detail-section h4 {
+    margin-top: 0;
+    color: #555;
+  }
+
+  .detail-section p {
+    margin: 0.5rem 0;
+  }
+
+  .tienda-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: bold;
+  }
+
+  .tienda-badge.saga {
+    background-color: #ff6b6b;
+    color: white;
+  }
+
+  .tienda-badge.ripley {
+    background-color: #4ecdc4;
+    color: white;
+  }
+</style>
+

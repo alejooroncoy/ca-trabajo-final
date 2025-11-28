@@ -1,0 +1,88 @@
+---
+import Layout from '../layouts/Layout.astro';
+import '../styles/landing.css';
+---
+
+<Layout title="Hermes - Optimiza tus rutas de delivery">
+  <main class="landing-page">
+    <div class="hero-background">
+      <div class="noise-texture"></div>
+      <div class="gradient-blob blob-1"></div>
+      <div class="gradient-blob blob-2"></div>
+    </div>
+    
+    <div class="hero-container">
+      <div class="hero-content">
+        <div class="brand-badge">
+          <span class="badge-dot"></span>
+          <span class="badge-text">Grupo 1</span>
+        </div>
+        
+        <h1 class="hero-title">
+          <span class="title-word title-1">Hermes</span>
+          <span class="title-word title-2">Delivery</span>
+        </h1>
+        
+        <div class="hero-description-wrapper">
+          <p class="hero-description">
+            Optimiza las rutas de delivery de tu empresa con inteligencia artificial.
+          </p>
+          <p class="hero-description-sub">
+            Velocidad, precisión y eficiencia en cada entrega.
+          </p>
+        </div>
+        
+        <div class="cta-wrapper">
+          <a href="/app" class="cta-button">
+            <span class="cta-text">Prueba ahora</span>
+            <svg class="cta-arrow" width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </div>
+        
+        <div class="hero-stats">
+          <div class="stat-item">
+            <div class="stat-number" data-value="99">99</div>
+            <div class="stat-label">Precisión</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-number" data-value="50">50</div>
+            <div class="stat-label">Menos tiempo</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">Disponible</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="hero-visual">
+        <div class="route-map">
+          <div class="map-point point-start">
+            <div class="point-pulse"></div>
+            <div class="point-core"></div>
+          </div>
+          <div class="map-point point-end">
+            <div class="point-pulse"></div>
+            <div class="point-core"></div>
+          </div>
+          <svg class="route-line" viewBox="0 0 400 250" xmlns="http://www.w3.org/2000/svg">
+            <path class="route-path" d="M30,200 Q80,120 130,150 Q180,180 230,140 Q280,100 330,130 Q350,145 370,120" 
+                  fill="none" stroke="url(#routeGradient)" stroke-width="3" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#10B981;stop-opacity:0.8" />
+                <stop offset="50%" style="stop-color:#F59E0B;stop-opacity:0.9" />
+                <stop offset="100%" style="stop-color:#EF4444;stop-opacity:0.8" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="map-grid"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>

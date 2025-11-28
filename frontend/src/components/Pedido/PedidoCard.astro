@@ -1,0 +1,67 @@
+---
+interface Props {
+  id: number;
+  tienda: string;
+  fecha: string;
+  nodos: number[];
+}
+
+const { id, tienda, fecha, nodos } = Astro.props;
+---
+
+<div class="pedido-card">
+  <div class="pedido-card-header">
+    <h4>Pedido #{id}</h4>
+    <span class={`tienda-badge ${tienda.toLowerCase()}`}>{tienda}</span>
+  </div>
+  <div class="pedido-card-body">
+    <p><strong>Fecha:</strong> {fecha}</p>
+    <p><strong>Nodos:</strong> {nodos.length}</p>
+  </div>
+</div>
+
+<style>
+  .pedido-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .pedido-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .pedido-card-header h4 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .tienda-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: bold;
+  }
+
+  .tienda-badge.saga {
+    background-color: #ff6b6b;
+    color: white;
+  }
+
+  .tienda-badge.ripley {
+    background-color: #4ecdc4;
+    color: white;
+  }
+
+  .pedido-card-body p {
+    margin: 0.25rem 0;
+    font-size: 0.9rem;
+  }
+</style>
+

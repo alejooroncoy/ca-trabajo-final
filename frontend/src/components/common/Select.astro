@@ -1,0 +1,27 @@
+---
+interface Props {
+  id?: string;
+  name?: string;
+  options: Array<{ value: string; label: string }>;
+  value?: string;
+}
+
+const { id, name, options, value } = Astro.props;
+---
+
+<select id={id} name={name} class="select-input" value={value}>
+  {options.map((option) => (
+    <option value={option.value}>{option.label}</option>
+  ))}
+</select>
+
+<style>
+  .select-input {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+    width: 100%;
+  }
+</style>
+

@@ -1,0 +1,100 @@
+.pedido-card {
+  background: #ffffff;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pedido-card:hover {
+  border-color: #4ECDC4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.pedido-card.selected {
+  border-color: #FF6B6B;
+  background-color: #fff5f5;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2);
+}
+
+.pedido-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.pedido-card-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.tienda-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.tienda-badge.saga {
+  background-color: #E74C3C;
+  color: white;
+}
+
+.tienda-badge.ripley {
+  background-color: #3498DB;
+  color: white;
+}
+
+.pedido-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pedido-fecha,
+.pedido-nodos {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.pedido-fecha strong,
+.pedido-nodos strong {
+  color: #333;
+}
+
+.nodos-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.nodo-tag {
+  background-color: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #555;
+}
+
+.ruta-info {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.ruta-info p {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #4ECDC4;
+}
+
+.ruta-info strong {
+  color: #333;
+}
