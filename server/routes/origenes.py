@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Dict
+from typing import Dict, List
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -55,18 +55,56 @@ def obtener_origenes():
             )
         }
     
-    # Seleccionar nodos FIJOS del grafo para Saga y Ripley (determinístico)
-    # Ordenar nodos para asegurar consistencia
-    nodos_disponibles_ordenados = sorted(nodos_disponibles)
+    # Seleccionar nodos en Lima CENTRAL para Saga y Ripley
+    # Lima central está alrededor de: -12.0464, -77.0428
+    lima_centro_lat = -12.0464
+    lima_centro_lon = -77.0428
     
-    # Usar índices fijos para siempre obtener los mismos nodos
-    # Nodo para Saga: índice 10% del total
-    # Nodo para Ripley: índice 20% del total
-    index_saga = int(len(nodos_disponibles_ordenados) * 0.1) if len(nodos_disponibles_ordenados) > 0 else 0
-    index_ripley = int(len(nodos_disponibles_ordenados) * 0.2) if len(nodos_disponibles_ordenados) > 1 else 0
+    def obtener_nodos_por_zona(lat_centro: float, lon_centro: float, radio_km: float = 3.0) -> List[int]:
+        """Obtiene nodos cerca del centro de Lima"""
+        from services.ruta_service import convertir_utm_a_latlon
+        import math
+        
+        nodos_en_zona = []
+        for nodo_id in nodos_disponibles:
+            coords_utm = grafo.get_node_coords(nodo_id)
+            if coords_utm and coords_utm != (0, 0):
+                lat, lon = convertir_utm_a_latlon(coords_utm[0], coords_utm[1])
+                
+                # Calcular distancia usando Haversine
+                R = 6371  # Radio de la Tierra en km
+                lat1, lon1 = math.radians(lat_centro), math.radians(lon_centro)
+                lat2, lon2 = math.radians(lat), math.radians(lon)
+                
+                dlat = lat2 - lat1
+                dlon = lon2 - lon1
+                
+                a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+                c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+                distancia = R * c
+                
+                if distancia <= radio_km:
+                    nodos_en_zona.append((nodo_id, distancia, lat, lon))
+        
+        # Ordenar por distancia al centro
+        nodos_en_zona.sort(key=lambda x: x[1])
+        return [nodo[0] for nodo in nodos_en_zona]
     
-    nodo_saga = nodos_disponibles_ordenados[index_saga] if len(nodos_disponibles_ordenados) > index_saga else (nodos_disponibles_ordenados[0] if nodos_disponibles_ordenados else 0)
-    nodo_ripley = nodos_disponibles_ordenados[index_ripley] if len(nodos_disponibles_ordenados) > index_ripley else (nodos_disponibles_ordenados[0] if nodos_disponibles_ordenados else 0)
+    # Obtener nodos en Lima central (dentro de 3 km del centro)
+    nodos_lima_central = obtener_nodos_por_zona(lima_centro_lat, lima_centro_lon, radio_km=3.0)
+    
+    if len(nodos_lima_central) >= 2:
+        # Saga: primer nodo más cercano al centro
+        # Ripley: segundo nodo más cercano al centro (separados pero ambos en el centro)
+        nodo_saga = nodos_lima_central[0]
+        nodo_ripley = nodos_lima_central[1] if len(nodos_lima_central) > 1 else nodos_lima_central[0]
+        print(f"Saga y Ripley en Lima central - Nodos: {nodo_saga}, {nodo_ripley}")
+    else:
+        # Fallback: usar nodos ordenados
+        nodos_ordenados = sorted(nodos_disponibles)
+        nodo_saga = nodos_ordenados[0] if nodos_ordenados else 0
+        nodo_ripley = nodos_ordenados[1] if len(nodos_ordenados) > 1 else nodo_saga
+        print(f"Fallback: usando primeros nodos ordenados")
     
     # Obtener coordenadas
     coords_saga_utm = grafo.get_node_coords(nodo_saga)

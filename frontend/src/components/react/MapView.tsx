@@ -67,17 +67,19 @@ const adjustMapBounds = (map: L.Map, layers: L.Layer[], padding: number = 0.15) 
 interface MapViewProps {
   rutaCalculada: Ruta | null;
   origen: Origen | null;
+  todosLosPedidos?: Array<{ id: number; nodo_destino: number; cliente_nombre: string; cliente_direccion?: string }>;
   pedidosSeleccionados?: Array<{ id: number; nodo_destino: number; cliente_nombre: string }>;
 }
 
-export default function MapView({ rutaCalculada, origen, pedidosSeleccionados = [] }: MapViewProps) {
+export default function MapView({ rutaCalculada, origen, todosLosPedidos = [], pedidosSeleccionados = [] }: MapViewProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const origenMarkerRef = useRef<L.Marker | null>(null);
   const destinoMarkersRef = useRef<L.Marker[]>([]);
   const routeLayerRef = useRef<L.LayerGroup | L.Polyline | null>(null);
   const [nodos, setNodos] = useState<Nodo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // No cargar al inicio
+  const [mapReady, setMapReady] = useState(false);
 
   // Inicializar mapa
   useEffect(() => {
@@ -98,25 +100,14 @@ export default function MapView({ rutaCalculada, origen, pedidosSeleccionados = 
     map.setView([-12.0464, -77.0428], 10);
 
     mapRef.current = map;
-
-    // Cargar nodos después de que el mapa esté listo
+    
+    // Marcar el mapa como listo
     map.whenReady(() => {
-      loadNodos();
+      setMapReady(true);
+      setLoading(false);
+      console.log('Mapa inicializado y listo');
     });
   }, []);
-
-  // Cargar nodos (solo para obtener coordenadas cuando sea necesario, no para mostrar)
-  const loadNodos = async () => {
-    try {
-      setLoading(true);
-      const nodosData = await getNodos();
-      setNodos(nodosData);
-    } catch (err) {
-      console.error('Error al cargar nodos:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Limpiar ruta del mapa
   const clearRoute = () => {
@@ -136,19 +127,30 @@ export default function MapView({ rutaCalculada, origen, pedidosSeleccionados = 
 
   // Mostrar marcador de origen
   useEffect(() => {
-    if (!mapRef.current || !origen) return;
+    if (!mapRef.current || !origen || !mapReady) {
+      return;
+    }
+
+    // Verificar que las coordenadas son válidas
+    if (!isValidCoordinate(origen.latitud, origen.longitud)) {
+      console.warn('Coordenadas de origen inválidas:', origen);
+      return;
+    }
 
     // Limpiar marcador de origen anterior
     if (origenMarkerRef.current) {
       mapRef.current.removeLayer(origenMarkerRef.current);
+      origenMarkerRef.current = null;
     }
 
-    // Crear marcador de origen
+    console.log('Mostrando marcador de origen:', origen);
+
+    // Crear marcador de origen con mejor visibilidad
     const marker = L.circleMarker([origen.latitud, origen.longitud], {
-      radius: 18,
+      radius: 20,
       fillColor: '#10B981',
       color: '#ffffff',
-      weight: 4,
+      weight: 5,
       opacity: 1,
       fillOpacity: 0.95,
     });
@@ -166,18 +168,60 @@ export default function MapView({ rutaCalculada, origen, pedidosSeleccionados = 
 
     // Ajustar vista para mostrar el origen
     mapRef.current.setView([origen.latitud, origen.longitud], 12);
-  }, [origen]);
+    
+    // Abrir popup automáticamente para que sea más visible
+    marker.openPopup();
+  }, [origen, mapReady]);
 
-  // Mostrar marcadores de destinos (pedidos seleccionados)
+  // Cargar TODOS los nodos del grafo UNA SOLA VEZ al inicializar el mapa
+  // Esto evita recargar nodos cada vez que cambia la tienda
   useEffect(() => {
-    if (!mapRef.current || pedidosSeleccionados.length === 0) {
-      // Limpiar marcadores de destino si no hay pedidos seleccionados
-      destinoMarkersRef.current.forEach((marker) => {
-        mapRef.current?.removeLayer(marker);
-      });
-      destinoMarkersRef.current = [];
+    if (!mapReady || nodos.length > 0) return; // Solo cargar una vez
+
+    const cargarTodosLosNodos = async () => {
+      try {
+        console.log('🔄 Cargando todos los nodos del grafo (una sola vez)...');
+        setLoading(true);
+        const todosNodos = await getNodos();
+        setNodos(todosNodos);
+        console.log(`✅ Todos los nodos del grafo cargados: ${todosNodos.length}`);
+      } catch (err) {
+        console.error('❌ Error al cargar nodos del grafo:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarTodosLosNodos();
+  }, [mapReady]); // Solo cuando el mapa está listo, una sola vez
+
+  // Mostrar marcadores de destinos (TODOS los pedidos, con los seleccionados destacados)
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) {
       return;
     }
+
+    // Limpiar marcadores anteriores siempre
+    destinoMarkersRef.current.forEach((marker) => {
+      mapRef.current?.removeLayer(marker);
+    });
+    destinoMarkersRef.current = [];
+
+    if (todosLosPedidos.length === 0) {
+      console.log('📍 No hay pedidos para mostrar');
+      return;
+    }
+
+    // Si no tenemos los nodos cargados aún, esperar
+    if (nodos.length === 0) {
+      console.log('⏳ Esperando nodos del grafo...');
+      return;
+    }
+    
+    console.log(`📍 Mostrando ${todosLosPedidos.length} pedidos en el mapa`);
+    
+    // Crear un set de IDs de pedidos seleccionados para búsqueda rápida
+    const pedidosSeleccionadosIds = new Set(pedidosSeleccionados.map(p => p.id));
 
     // Limpiar marcadores anteriores
     destinoMarkersRef.current.forEach((marker) => {
@@ -185,44 +229,54 @@ export default function MapView({ rutaCalculada, origen, pedidosSeleccionados = 
     });
     destinoMarkersRef.current = [];
 
-    // Crear marcadores para cada pedido seleccionado
-    pedidosSeleccionados.forEach((pedido) => {
+    // Crear marcadores para TODOS los pedidos
+    todosLosPedidos.forEach((pedido) => {
       const nodo = nodos.find((n: Nodo) => n.id === pedido.nodo_destino);
       if (nodo && isValidCoordinate(nodo.latitud, nodo.longitud)) {
+        const estaSeleccionado = pedidosSeleccionadosIds.has(pedido.id);
+        
+        // Estilo diferente para pedidos seleccionados vs no seleccionados
         const marker = L.circleMarker([nodo.latitud, nodo.longitud], {
-          radius: 14,
-          fillColor: '#EF4444',
+          radius: estaSeleccionado ? 16 : 10, // Más grande si está seleccionado
+          fillColor: estaSeleccionado ? '#EF4444' : '#94A3B8', // Rojo si seleccionado, gris si no
           color: '#ffffff',
-          weight: 3,
+          weight: estaSeleccionado ? 4 : 2,
           opacity: 1,
-          fillOpacity: 0.95,
+          fillOpacity: estaSeleccionado ? 0.95 : 0.7, // Más opaco si está seleccionado
         });
 
+        const estado = estaSeleccionado ? 'Seleccionado' : 'Disponible';
+        const colorEstado = estaSeleccionado ? '#EF4444' : '#94A3B8';
+        
         marker.bindPopup(`
           <div style="text-align: left; padding: 0;">
-            <div style="font-weight: 600; color: #EF4444; margin-bottom: 8px; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">Destino</div>
+            <div style="font-weight: 600; color: ${colorEstado}; margin-bottom: 8px; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase;">${estado}</div>
             <div style="color: #1A3A5C; margin-bottom: 4px; font-size: 14px;">${pedido.cliente_nombre}</div>
+            ${pedido.cliente_direccion ? `<div style="color: #808088; font-size: 11px; margin-bottom: 4px;">${pedido.cliente_direccion}</div>` : ''}
             <div style="color: #808088; font-size: 12px;">Pedido #${pedido.id} - Nodo ${nodo.id}</div>
           </div>
         `);
 
         marker.addTo(mapRef.current!);
         destinoMarkersRef.current.push(marker);
+      } else {
+        console.warn(`No se encontró nodo ${pedido.nodo_destino} o coordenadas inválidas para pedido ${pedido.id}`);
       }
     });
 
-    // Ajustar vista para mostrar todos los marcadores (origen + destinos)
-    if (origen && destinoMarkersRef.current.length > 0) {
-      const allMarkers = [origenMarkerRef.current, ...destinoMarkersRef.current].filter(Boolean) as L.Marker[];
-      if (allMarkers.length > 0) {
-        const group = L.featureGroup(allMarkers);
-        mapRef.current.fitBounds(group.getBounds().pad(0.1), {
-          padding: [50, 50],
-          maxZoom: 15,
-        });
-      }
+    // Ajustar vista para mostrar todos los marcadores (origen + todos los destinos)
+    const allMarkers = [origenMarkerRef.current, ...destinoMarkersRef.current].filter(Boolean) as L.Layer[];
+    if (allMarkers.length > 0) {
+      const group = L.featureGroup(allMarkers);
+      mapRef.current.fitBounds(group.getBounds().pad(0.15), {
+        padding: [50, 50],
+        maxZoom: 15,
+      });
+    } else if (origen && origenMarkerRef.current) {
+      // Si solo hay origen, centrar en él
+      mapRef.current.setView([origen.latitud, origen.longitud], 12);
     }
-  }, [pedidosSeleccionados, nodos, origen]);
+  }, [todosLosPedidos, pedidosSeleccionados, nodos, origen, mapReady]);
 
   // Asegurar que las coordenadas incluyan origen y destino
   const ensureOriginAndDestination = (
@@ -362,23 +416,136 @@ export default function MapView({ rutaCalculada, origen, pedidosSeleccionados = 
 
       console.log(`Coordenadas finales para dibujar: ${coordenadasRuta.length} puntos`);
 
-      // Dibujar polyline de la ruta
-      if (coordenadasRuta.length >= 2) {
-        const polyline = drawRoutePolyline(coordenadasRuta, {
-          color: '#EF4444',
-          weight: 6,
-          opacity: 0.9,
-          smoothFactor: 1.0,
-          lineJoin: 'round',
-          lineCap: 'round',
-        });
+      // Dividir la ruta en ida y vuelta
+      // La ruta tiene la estructura: [origen, pedido1, pedido2, ..., pedidoN, origen]
+      // Necesitamos identificar dónde termina la ida (último pedido) y comienza la vuelta
+      if (coordenadasRuta.length >= 2 && rutaCalculada.ruta && rutaCalculada.ruta.length >= 3) {
+        const nodosRuta = rutaCalculada.ruta;
+        const nodoOrigen = nodosRuta[0];
+        const ultimoPedidoIndex = nodosRuta.length - 2; // El penúltimo nodo es el último pedido
+        const ultimoPedidoNodoId = nodosRuta[ultimoPedidoIndex];
+        
+        // Encontrar el punto de división en las coordenadas
+        // Buscamos la coordenada que corresponde al último pedido (antes del retorno al origen)
+        let indiceDivision = -1;
+        
+        if (nodos.length > 0) {
+          const ultimoPedidoNodo = nodos.find(n => n.id === ultimoPedidoNodoId);
+          const origenNodo = nodos.find(n => n.id === nodoOrigen);
+          
+          if (ultimoPedidoNodo) {
+            // Buscar la coordenada más cercana al último pedido
+            let distanciaMinima = Infinity;
+            let mejorIndice = -1;
+            
+            // Buscar desde el medio hacia atrás para encontrar el último pedido
+            for (let i = Math.floor(coordenadasRuta.length * 0.5); i < coordenadasRuta.length - 10; i++) {
+              const distancia = calculateDistance(
+                coordenadasRuta[i],
+                [ultimoPedidoNodo.latitud, ultimoPedidoNodo.longitud]
+              );
+              if (distancia < distanciaMinima) {
+                distanciaMinima = distancia;
+                mejorIndice = i;
+              }
+            }
+            
+            // Si encontramos un punto cercano (menos de 1km), usarlo
+            if (mejorIndice !== -1 && distanciaMinima < 0.01) {
+              indiceDivision = mejorIndice;
+            }
+          }
+          
+          // Si no encontramos el punto exacto, buscar el punto más cercano al origen final
+          if (indiceDivision === -1 && origenNodo) {
+            // Buscar desde el final hacia atrás para encontrar donde comienza el retorno
+            let distanciaMinimaOrigen = Infinity;
+            for (let i = Math.floor(coordenadasRuta.length * 0.7); i < coordenadasRuta.length; i++) {
+              const distancia = calculateDistance(
+                coordenadasRuta[i],
+                [origenNodo.latitud, origenNodo.longitud]
+              );
+              if (distancia < distanciaMinimaOrigen) {
+                distanciaMinimaOrigen = distancia;
+                // El punto de división es justo antes de acercarse al origen
+                if (distancia < 0.01) {
+                  indiceDivision = Math.max(0, i - 5); // Retroceder un poco
+                  break;
+                }
+              }
+            }
+          }
+        }
+        
+        // Si aún no encontramos el punto de división, usar una aproximación basada en la cantidad de pedidos
+        if (indiceDivision === -1 || indiceDivision === 0 || indiceDivision >= coordenadasRuta.length - 5) {
+          // Si hay N pedidos, la ida debería ser aproximadamente N/(N+1) de la ruta
+          // (N segmentos de ida vs 1 segmento de vuelta)
+          const numPedidos = nodosRuta.length - 2; // Total de nodos menos origen inicial y final
+          const proporcionIda = numPedidos > 0 ? numPedidos / (numPedidos + 1) : 0.8;
+          indiceDivision = Math.floor(coordenadasRuta.length * proporcionIda);
+          // Asegurar que no sea muy cerca del final
+          indiceDivision = Math.min(indiceDivision, coordenadasRuta.length - 10);
+        }
+        
+        // Dividir coordenadas en ida y vuelta
+        const coordenadasIda = coordenadasRuta.slice(0, indiceDivision + 1);
+        const coordenadasVuelta = coordenadasRuta.slice(indiceDivision);
+        
+        console.log(`🟢 Ruta de ida: ${coordenadasIda.length} puntos`);
+        console.log(`🔴 Ruta de vuelta: ${coordenadasVuelta.length} puntos`);
+        
+        // Dibujar ruta de ida (verde - desde origen hasta último pedido)
+        if (coordenadasIda.length >= 2) {
+          const polylineIda = drawRoutePolyline(coordenadasIda, {
+            color: '#10B981', // Verde para la ida
+            weight: 6,
+            opacity: 0.9,
+            smoothFactor: 1.0,
+            lineJoin: 'round',
+            lineCap: 'round',
+          });
 
-        if (polyline) {
-          routeGroup.addLayer(polyline);
-          console.log('Polyline agregado al mapa');
+          if (polylineIda) {
+            routeGroup.addLayer(polylineIda);
+            console.log('✅ Ruta de ida dibujada (verde)');
+          }
+        }
+        
+        // Dibujar ruta de vuelta (rojo - desde último pedido hasta origen)
+        if (coordenadasVuelta.length >= 2) {
+          const polylineVuelta = drawRoutePolyline(coordenadasVuelta, {
+            color: '#EF4444', // Rojo para la vuelta
+            weight: 6,
+            opacity: 0.9,
+            smoothFactor: 1.0,
+            lineJoin: 'round',
+            lineCap: 'round',
+          });
+
+          if (polylineVuelta) {
+            routeGroup.addLayer(polylineVuelta);
+            console.log('✅ Ruta de vuelta dibujada (rojo)');
+          }
         }
       } else {
-        console.warn('No hay suficientes coordenadas para dibujar la ruta (mínimo 2 puntos)');
+        // Fallback: dibujar toda la ruta de un solo color si no podemos dividirla
+        console.warn('⚠️ No se pudo dividir la ruta, dibujando toda en un solo color');
+        if (coordenadasRuta.length >= 2) {
+          const polyline = drawRoutePolyline(coordenadasRuta, {
+            color: '#EF4444',
+            weight: 6,
+            opacity: 0.9,
+            smoothFactor: 1.0,
+            lineJoin: 'round',
+            lineCap: 'round',
+          });
+
+          if (polyline) {
+            routeGroup.addLayer(polyline);
+            console.log('Polyline agregado al mapa (fallback)');
+          }
+        }
       }
 
       // Agregar el grupo al mapa si tiene capas

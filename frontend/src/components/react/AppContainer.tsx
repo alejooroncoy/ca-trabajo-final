@@ -22,9 +22,16 @@ export default function AppContainer() {
   // Cargar pedidos cuando cambia la tienda seleccionada
   useEffect(() => {
     if (tiendaSeleccionada) {
+      console.log(`🔄 Cargando pedidos para ${tiendaSeleccionada}...`);
       getPedidos(tiendaSeleccionada)
-        .then(setPedidos)
-        .catch(err => console.error('Error al cargar pedidos:', err));
+        .then(data => {
+          console.log(`✅ Pedidos cargados para ${tiendaSeleccionada}:`, data.length);
+          setPedidos(data);
+        })
+        .catch(err => {
+          console.error('Error al cargar pedidos:', err);
+          setPedidos([]);
+        });
     } else {
       setPedidos([]);
     }
@@ -75,14 +82,26 @@ export default function AppContainer() {
   return (
     <div className="flex w-full flex-1 overflow-hidden">
       <div className="w-[70%] h-full relative bg-white border-r border-blue-primary/10">
-        <MapView 
-          rutaCalculada={rutaCalculada}
-          origen={tiendaSeleccionada && origenes ? origenes[tiendaSeleccionada] : null}
-          pedidosSeleccionados={pedidosSeleccionados.map(id => {
-            const pedido = pedidos.find(p => p.id === id);
-            return pedido ? { id: pedido.id, nodo_destino: pedido.nodo_destino, cliente_nombre: pedido.cliente_nombre } : null;
-          }).filter(Boolean) as Array<{ id: number; nodo_destino: number; cliente_nombre: string }>}
-        />
+        {origenes ? (
+          <MapView 
+            rutaCalculada={rutaCalculada}
+            origen={tiendaSeleccionada ? origenes[tiendaSeleccionada] : null}
+            todosLosPedidos={tiendaSeleccionada ? pedidos.map(p => ({ 
+              id: p.id, 
+              nodo_destino: p.nodo_destino, 
+              cliente_nombre: p.cliente_nombre,
+              cliente_direccion: p.cliente_direccion
+            })) : []}
+            pedidosSeleccionados={pedidosSeleccionados.map(id => {
+              const pedido = pedidos.find(p => p.id === id);
+              return pedido ? { id: pedido.id, nodo_destino: pedido.nodo_destino, cliente_nombre: pedido.cliente_nombre } : null;
+            }).filter(Boolean) as Array<{ id: number; nodo_destino: number; cliente_nombre: string }>}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-blue-medium">Cargando mapa...</div>
+          </div>
+        )}
       </div>
       <div className="w-[30%] h-full bg-white/80 backdrop-blur-sm flex flex-col p-6 md:p-8 overflow-y-auto custom-scrollbar">
         {/* Selector de Tienda */}
@@ -125,6 +144,7 @@ export default function AppContainer() {
           <>
             <PedidoList 
               tienda={tiendaSeleccionada}
+              pedidos={pedidos}
               pedidosSeleccionados={pedidosSeleccionados}
               onPedidosChange={handlePedidosChange}
             />

@@ -1,33 +1,14 @@
-import { useState, useEffect } from 'react';
-import { getPedidos, type Pedido } from '../../services/api';
+import type { Pedido } from '../../services/api';
 
 interface PedidoListProps {
   tienda: 'Saga' | 'Ripley';
+  pedidos: Pedido[]; // Recibir pedidos como prop en lugar de cargarlos
   pedidosSeleccionados: number[];
   onPedidosChange: (pedidoIds: number[]) => void;
 }
 
-export default function PedidoList({ tienda, pedidosSeleccionados, onPedidosChange }: PedidoListProps) {
-  const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadPedidos();
-  }, [tienda]);
-
-  const loadPedidos = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getPedidos(tienda);
-      setPedidos(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar pedidos');
-    } finally {
-      setLoading(false);
-    }
-  };
+export default function PedidoList({ tienda, pedidos, pedidosSeleccionados, onPedidosChange }: PedidoListProps) {
+  // Ya no necesitamos estado local ni cargar pedidos - los recibimos como prop
 
   const handleTogglePedido = (pedidoId: number) => {
     if (pedidosSeleccionados.includes(pedidoId)) {
@@ -36,14 +17,6 @@ export default function PedidoList({ tienda, pedidosSeleccionados, onPedidosChan
       onPedidosChange([...pedidosSeleccionados, pedidoId]);
     }
   };
-
-  if (loading) {
-    return <div className="py-12 text-center text-blue-medium">Cargando pedidos...</div>;
-  }
-
-  if (error) {
-    return <div className="py-12 text-center text-red-route">Error: {error}</div>;
-  }
 
   return (
     <div className="flex-1">
