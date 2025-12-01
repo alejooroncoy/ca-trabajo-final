@@ -63,11 +63,11 @@ export async function createPedido(pedido: Omit<Pedido, 'id'>): Promise<Pedido> 
 }
 
 // Rutas
-export async function calcularRuta(pedidoId: number): Promise<Ruta> {
+export async function calcularRuta(pedidoId: number, algoritmo: string = 'dijkstra'): Promise<Ruta> {
   const response = await fetch(`${API_BASE}/rutas/calcular`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pedido_id: pedidoId }),
+    body: JSON.stringify({ pedido_id: pedidoId, algoritmo }),
   });
   if (!response.ok) throw new Error('Error al calcular ruta');
   return response.json();
@@ -100,11 +100,11 @@ export async function getOrigenes(): Promise<{ Saga: Origen; Ripley: Origen }> {
 }
 
 // Rutas múltiples
-export async function calcularRutaMultiple(pedidoIds: number[], nodoOrigen: number): Promise<Ruta> {
+export async function calcularRutaMultiple(pedidoIds: number[], nodoOrigen: number, algoritmo: string = 'dijkstra'): Promise<Ruta> {
   const response = await fetch(`${API_BASE}/rutas/calcular-multiple`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pedido_ids: pedidoIds, nodo_origen: nodoOrigen }),
+    body: JSON.stringify({ pedido_ids: pedidoIds, nodo_origen: nodoOrigen, algoritmo }),
   });
   if (!response.ok) throw new Error('Error al calcular ruta múltiple');
   return response.json();

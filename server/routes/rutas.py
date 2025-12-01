@@ -13,6 +13,7 @@ pedido_repository = PedidoRepository()
 
 class CalcularRutaRequest(BaseModel):
     pedido_id: int
+    algoritmo: str = "dijkstra"  # "dijkstra" o "floyd_warshall"
     
     class Config:
         from_attributes = True
@@ -20,6 +21,7 @@ class CalcularRutaRequest(BaseModel):
 class CalcularRutaMultipleRequest(BaseModel):
     pedido_ids: List[int]
     nodo_origen: int  # Nodo de origen (Saga o Ripley)
+    algoritmo: str = "dijkstra"  # "dijkstra" o "floyd_warshall"
     
     class Config:
         from_attributes = True
@@ -46,11 +48,11 @@ def calcular_ruta(request: CalcularRutaRequest):
     destino = pedido.nodos[1]
     ruta_optimizada = [origen, destino]
     
-    print(f"Calculando ruta de punto A a punto B: {origen} -> {destino}")
+    print(f"Calculando ruta de punto A a punto B: {origen} -> {destino} usando {request.algoritmo.upper()}")
     
     # Calcular camino mínimo entre origen y destino
     from services.ruta_service import convertir_utm_a_latlon
-    ruta_camino, distancia_total, coords_segmento = ruta_service.calcular_ruta_entre_nodos(origen, destino)
+    ruta_camino, distancia_total, coords_segmento = ruta_service.calcular_ruta_entre_nodos(origen, destino, request.algoritmo)
     
     # Si se encontró un camino con nodos intermedios, usar esa ruta completa
     if ruta_camino and len(ruta_camino) > 2:

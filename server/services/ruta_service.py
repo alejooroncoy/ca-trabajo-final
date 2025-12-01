@@ -189,7 +189,107 @@ class RutaService:
         print(f"         ¿Origen y destino están en el mismo componente conectado?")
         return [], float('inf')
     
-    def calcular_ruta_entre_nodos(self, origen: int, destino: int) -> Tuple[List[int], float, List[Tuple[float, float]]]:
+    def calcular_ruta_entre_nodos(self, origen: int, destino: int, algoritmo: str = "dijkstra") -> Tuple[List[int], float, List[Tuple[float, float]]]:
+        """
+        Calcula la ruta más corta entre dos nodos usando el algoritmo especificado.
+        
+        Args:
+            origen: ID del nodo origen
+            destino: ID del nodo destino
+            algoritmo: Algoritmo a usar ("dijkstra" o "floyd_warshall")
+        
+        Returns:
+            Tupla (ruta, distancia_total, coordenadas) donde ruta es lista de IDs de nodos
+        """
+        print(f"Calculando ruta de punto A a punto B: {origen} -> {destino} usando {algoritmo.upper()}")
+        
+        if algoritmo.lower() == "floyd_warshall":
+            return self._calcular_ruta_floyd_warshall(origen, destino)
+        else:
+            return self._calcular_ruta_dijkstra(origen, destino)
+    
+    def _calcular_ruta_dijkstra(self, origen: int, destino: int) -> Tuple[List[int], float, List[Tuple[float, float]]]:
+        """Calcula la ruta usando el algoritmo de Dijkstra"""
+        from algorithms.dijkstra import dijkstra
+        
+        if origen not in self._nodo_to_idx or destino not in self._nodo_to_idx:
+            print(f"      ❌ Origen ({origen}) o Destino ({destino}) no encontrado en la matriz.")
+            return [], 0.0, []
+        
+        origen_idx = self._nodo_to_idx[origen]
+        destino_idx = self._nodo_to_idx[destino]
+        
+        # Usar Dijkstra sobre la matriz
+        distancia_total, camino_indices = dijkstra(self._matriz, origen_idx, destino_idx)
+        
+        if not camino_indices:
+            print(f"      ❌ Dijkstra no encontró camino")
+            # Intentar con el método directo del grafo
+            camino_nodos, distancia_directa = self._calcular_ruta_grafo_directo(origen, destino)
+            if camino_nodos:
+                coordenadas = self._obtener_coordenadas_ruta(camino_nodos)
+                return camino_nodos, distancia_directa, coordenadas
+            return [], 0.0, []
+        
+        # Convertir índices de vuelta a IDs de nodos
+        camino_nodos = [self._idx_to_nodo[idx] for idx in camino_indices]
+        
+        print(f"      ✅ Dijkstra encontró camino con {len(camino_nodos)} nodos")
+        
+        # Verificar si el camino del grafo real tiene más nodos intermedios
+        print(f"         Verificando si el camino del grafo real tiene más nodos intermedios...")
+        camino_grafo, distancia_grafo = self._calcular_ruta_grafo_directo(origen, destino)
+        
+        if camino_grafo and len(camino_grafo) > len(camino_nodos):
+            print(f"      ✅ Usando camino del grafo con {len(camino_grafo)} nodos (más detallado)")
+            coordenadas = self._obtener_coordenadas_ruta(camino_grafo)
+            return camino_grafo, distancia_grafo, coordenadas
+        else:
+            coordenadas = self._obtener_coordenadas_ruta(camino_nodos)
+            return camino_nodos, distancia_total, coordenadas
+    
+    def _calcular_ruta_floyd_warshall(self, origen: int, destino: int) -> Tuple[List[int], float, List[Tuple[float, float]]]:
+        """Calcula la ruta usando el algoritmo de Floyd-Warshall"""
+        from algorithms.floyd_warshall import encontrar_camino_floyd_warshall
+        
+        if origen not in self._nodo_to_idx or destino not in self._nodo_to_idx:
+            print(f"      ❌ Origen ({origen}) o Destino ({destino}) no encontrado en la matriz.")
+            return [], 0.0, []
+        
+        origen_idx = self._nodo_to_idx[origen]
+        destino_idx = self._nodo_to_idx[destino]
+        
+        # Usar Floyd-Warshall sobre la matriz
+        distancia_total, camino_indices = encontrar_camino_floyd_warshall(self._matriz, origen_idx, destino_idx)
+        
+        if not camino_indices:
+            print(f"      ❌ Floyd-Warshall no encontró camino")
+            return [], 0.0, []
+        
+        # Convertir índices de vuelta a IDs de nodos
+        camino_nodos = [self._idx_to_nodo[idx] for idx in camino_indices]
+        
+        print(f"      ✅ Floyd-Warshall encontró camino con {len(camino_nodos)} nodos")
+        print(f"         Camino: {camino_nodos[:10]}..." + (f" (total: {len(camino_nodos)})" if len(camino_nodos) > 10 else ""))
+        
+        # Obtener coordenadas
+        coordenadas = self._obtener_coordenadas_ruta(camino_nodos)
+        return camino_nodos, distancia_total, coordenadas
+    
+    def _obtener_coordenadas_ruta(self, camino_nodos: List[int]) -> List[Tuple[float, float]]:
+        """Obtiene las coordenadas de una ruta de nodos"""
+        coordenadas = []
+        for nodo_id in camino_nodos:
+            coords_utm = self.grafo.graph.get_node_coords(nodo_id)
+            lat, lon = convertir_utm_a_latlon(coords_utm[0], coords_utm[1])
+            coordenadas.append((lat, lon))
+        
+        print(f"      ✅ Coordenadas obtenidas: {len(coordenadas)} puntos para ruta de {len(camino_nodos)} nodos")
+        if len(coordenadas) >= 3:
+            print(f"         Primeros 3 puntos: {coordenadas[:3]}")
+            print(f"         Últimos 3 puntos: {coordenadas[-3:]}")
+        
+        return coordenadas
         """
         Calcula la ruta más corta entre dos nodos pasando por TODOS los nodos intermedios del grafo.
         Usa BFS sobre el grafo directamente para garantizar que pasa por todos los nodos del camino real.

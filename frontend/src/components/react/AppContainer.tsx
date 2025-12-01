@@ -6,6 +6,7 @@ import { getOrigenes, calcularRutaMultiple, getPedidos } from '../../services/ap
 
 export default function AppContainer() {
   const [tiendaSeleccionada, setTiendaSeleccionada] = useState<'Saga' | 'Ripley' | null>(null);
+  const [algoritmo, setAlgoritmo] = useState<string>('dijkstra');
   const [origenes, setOrigenes] = useState<{ Saga: Origen; Ripley: Origen } | null>(null);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [pedidosSeleccionados, setPedidosSeleccionados] = useState<number[]>([]);
@@ -44,6 +45,12 @@ export default function AppContainer() {
     setRutaCalculada(null);
   };
 
+  const handleAlgorithmChange = (nuevoAlgoritmo: string) => {
+    setAlgoritmo(nuevoAlgoritmo);
+    // Limpiar ruta cuando cambia el algoritmo para forzar recálculo
+    setRutaCalculada(null);
+  };
+
   const handlePedidosChange = (pedidoIds: number[]) => {
     setPedidosSeleccionados(pedidoIds);
     // Limpiar ruta cuando cambian los pedidos seleccionados
@@ -64,10 +71,11 @@ export default function AppContainer() {
       console.log('Calculando ruta múltiple:', {
         pedidos: pedidosSeleccionados,
         nodoOrigen,
-        tienda: tiendaSeleccionada
+        tienda: tiendaSeleccionada,
+        algoritmo: algoritmo
       });
       
-      const ruta = await calcularRutaMultiple(pedidosSeleccionados, nodoOrigen);
+      const ruta = await calcularRutaMultiple(pedidosSeleccionados, nodoOrigen, algoritmo);
       console.log('Ruta calculada recibida:', ruta);
       
       setRutaCalculada(ruta);
@@ -137,6 +145,28 @@ export default function AppContainer() {
               Origen: {origenes[tiendaSeleccionada].nombre}
             </p>
           )}
+        </div>
+
+        {/* Selector de Algoritmo */}
+        <div className="mb-8 pb-6 border-b border-blue-primary/10">
+          <label htmlFor="algorithm-selector" className="flex items-center gap-2 mb-3 font-semibold text-sm text-blue-dark uppercase tracking-wide">
+            <span>⚙️</span>
+            Algoritmo de rutas
+          </label>
+          <select
+            id="algorithm-selector"
+            value={algoritmo}
+            onChange={(e) => handleAlgorithmChange(e.target.value)}
+            className="w-full px-4 py-3 border border-blue-primary/20 rounded-lg text-sm bg-white text-blue-dark font-medium transition-all duration-300 hover:border-blue-primary/40 focus:outline-none focus:ring-2 focus:ring-blue-primary/20 focus:border-blue-primary cursor-pointer"
+          >
+            <option value="dijkstra">Dijkstra</option>
+            <option value="floyd_warshall">Floyd-Warshall</option>
+          </select>
+          <p className="mt-2 text-xs text-blue-medium">
+            {algoritmo === 'dijkstra' 
+              ? 'Algoritmo eficiente para calcular el camino más corto entre dos puntos'
+              : 'Algoritmo que encuentra todos los caminos más cortos entre todos los pares de nodos'}
+          </p>
         </div>
 
         {/* Lista de Pedidos */}
